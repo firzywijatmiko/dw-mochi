@@ -14,17 +14,15 @@ class CreateOrdersTable extends Migration
     public function up()
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->id('order_id');
+            $table->id();
             $table->string('customer_name');
             $table->string('customer_phone');
             $table->dateTime('pickup_at');
-            $table->string('status');
+            $table->enum('status', ['pending', 'process', 'completed', 'cancelled'])->default('pending');
             $table->text('notes')->nullable();
-            $table->text('raw_template')->nullable();
-            $table->unsignedBigInteger('created_by');
+            $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
+            //$table->decimal('total_price', 10, 2);
             $table->timestamps();
-
-            $table->foreign('created_by')->references('users_id')->on('users')->onDelete('cascade');
         });
     }
 

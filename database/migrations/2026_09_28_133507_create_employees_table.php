@@ -15,12 +15,12 @@ class CreateEmployeesTable extends Migration
     {
         Schema::create('employees', function (Blueprint $table) {
             $table->id();
-            // --- TAMBAHKAN KOLOM DI SINI ---
+            $table->foreignId('users_id')->constrained('users')->onDelete('cascade');
             $table->string('name');
-            $table->string('phone');
+            $table->decimal('base_daily_wage', 10, 2);
+            $table->decimal('overtime_rate_1x', 10, 2);
+            $table->decimal('overtime_rate_2x', 10, 2);
             $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->decimal('base_salary', 10, 2);
-            // --------------------------------
             $table->timestamps();
         });
     }

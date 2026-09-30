@@ -15,8 +15,9 @@ class CreateProductVariantsTable extends Migration
     {
         Schema::create('product_variants', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Contoh: Mochi Coklat, Mochi Keju
+            $table->string('name'); 
             $table->decimal('price', 10, 2);
+            $table->boolean('is_active')->default(true);
             $table->integer('stock')->default(0);
             $table->timestamps();
         });

@@ -14,10 +14,10 @@ class CreateProductVariantsTable extends Migration
     public function up()
     {
         Schema::create('product_variants', function (Blueprint $table) {
-            $table->id();
-            $table->string('name'); // Contoh: Mochi Coklat, Mochi Keju
+           $table->id('product_variants_id');
+            $table->string('name');
             $table->decimal('price', 10, 2);
-            $table->integer('stock')->default(0);
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

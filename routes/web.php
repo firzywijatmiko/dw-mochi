@@ -7,6 +7,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ProductVariantController;
 
 Route::get('/', function () {
     return redirect('/login');
@@ -36,6 +37,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('expenses', \App\Http\Controllers\ExpenseController::class)->except(['create', 'edit', 'show']);
         // Rute Laporan Operasional Mingguan[cite: 22]
         Route::get('/reports/weekly', [\App\Http\Controllers\ReportController::class, 'weeklyReport'])->name('reports.weekly');
+        Route::resource('product_variants', ProductVariantController::class);
     });
 
     // --- GRUP KARYAWAN ---

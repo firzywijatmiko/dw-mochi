@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Order;
+use App\Models\ProductVariant;
 use App\Services\WhatsAppParserService;
 use App\Services\OrderService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -20,10 +21,18 @@ class OrderController extends Controller
         $this->orderService = $orderService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with('details.productVariant')->latest()->get();
-        return view('owner.orders.index', compact('orders'));
+        $status = $request->query('status');
+        $orders = Order::with('details.productVariant')
+            ->when(in_array($status, ['pending', 'process', 'completed', 'cancelled']), function ($query) use ($status) {
+                return $query->where('status', $status);
+            })
+            ->latest()
+            ->get();
+        $variants = ProductVariant::where('is_active', true)->orderBy('name')->get();
+
+        return view('owner.orders.index', compact('orders', 'variants', 'status'));
     }
 
     // --- ACTIVITY DIAGRAM: TAMBAH PESANAN ---
@@ -33,7 +42,10 @@ class OrderController extends Controller
             'customer_name'  => 'required|string',
             'customer_phone' => 'required|string',
             'pickup_at'      => 'required|date',
-            'variants'       => 'required|array'
+            'variants'       => 'required|array|min:1',
+            'variants.*.id' => 'required|exists:product_variants,id',
+            'variants.*.quantity' => 'required|integer|min:1',
+            'variants.*.price' => 'required|numeric|min:0',
         ]);
 
         // Cek Duplikasi
@@ -53,6 +65,10 @@ class OrderController extends Controller
             'customer_name'  => 'required|string',
             'customer_phone' => 'required|string',
             'pickup_at'      => 'required|date',
+            'variants'       => 'required|array|min:1',
+            'variants.*.id' => 'required|exists:product_variants,id',
+            'variants.*.quantity' => 'required|integer|min:1',
+            'variants.*.price' => 'required|numeric|min:0',
         ]);
 
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at, $order->id)) {
@@ -60,6 +76,14 @@ class OrderController extends Controller
         }
 
         $order->update($request->only(['customer_name', 'customer_phone', 'pickup_at', 'status', 'notes']));
+        $order->details()->delete();
+        foreach ($request->input('variants') as $variant) {
+            $order->details()->create([
+                'product_variant_id' => $variant['id'],
+                'quantity' => $variant['quantity'],
+                'unit_price' => $variant['price'],
+            ]);
+        }
 
         return redirect()->route('owner.orders.index')->with('success', 'Pesanan Berhasil Diubah');
     }
@@ -83,7 +107,8 @@ class OrderController extends Controller
         }
 
         // Lempar data hasil parsing ke halaman form agar Owner bisa mereview (Preview Data)
-        return view('owner.orders.create_preview', compact('parsedData'));
+        $variants = ProductVariant::where('is_active', true)->orderBy('name')->get();
+        return view('owner.orders.create_preview', compact('parsedData', 'variants'));
     }
 
     // --- ACTIVITY DIAGRAM: GENERATE LABEL PESANAN ---

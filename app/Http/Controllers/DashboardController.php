@@ -16,6 +16,8 @@ class DashboardController extends Controller
     public function index()
     {
         $today = Carbon::today()->toDateString();
+        $weekStart = Carbon::now()->startOfWeek();
+        $weekEnd = Carbon::now()->endOfWeek();
 
         // 1. Ambil Data Pesanan
         $activeOrders = Order::whereIn('status', ['pending', 'process'])->count();
@@ -35,16 +37,33 @@ class DashboardController extends Controller
         // 3. Ambil Data Presensi
         $presentEmployees = Attendance::where('date', $today)->whereNotNull('check_in_at')->count();
 
+        $weeklyOrders = Order::whereBetween('created_at', [$weekStart, $weekEnd])->count();
+        $weeklyRevenue = OrderDetail::whereHas('order', function ($query) use ($weekStart, $weekEnd) {
+            $query->where('status', 'completed')
+                ->whereBetween('updated_at', [$weekStart, $weekEnd]);
+        })->get()->sum(function ($detail) {
+            return $detail->quantity * $detail->unit_price;
+        });
+
+        $recentOrders = Order::with('details')
+            ->whereIn('status', ['pending', 'process'])
+            ->whereDate('pickup_at', '>=', $today)
+            ->orderBy('pickup_at')
+            ->limit(5)
+            ->get();
+
         // 4. Susun Data Statistik
         $statistics = [
             'active_orders' => $activeOrders,
             'completed_today' => $completedToday,
             'today_revenue' => $todayRevenue,
             'today_expense' => $todayExpense,
-            'present_employees' => $presentEmployees
+            'present_employees' => $presentEmployees,
+            'weekly_orders' => $weeklyOrders,
+            'weekly_revenue' => $weeklyRevenue,
         ];
 
         // 5. Tampilkan Halaman Dashboard
-        return view('owner.dashboard', compact('statistics'));
+        return view('owner.dashboard', compact('statistics', 'recentOrders'));
     }
 }

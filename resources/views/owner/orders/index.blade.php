@@ -3,6 +3,7 @@
 @section('header_title', 'Manajemen Pesanan')
 
 @section('content')
+<style>[x-cloak] { display: none !important; }</style>
 <div x-data="orderManager()" class="space-y-4">
     @if(session('success'))
         <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">{{ session('success') }}</div>
@@ -47,7 +48,7 @@
                     <td class="px-3 py-3 font-semibold text-[#0f2137]">P-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}</td>
                     <td class="px-3 py-3">{{ $order->customer_name }}</td><td class="px-3 py-3">{{ $order->customer_phone }}</td><td class="px-3 py-3">{{ $quantity }} pcs</td><td class="px-3 py-3">{{ $flavors ?: '-' }}</td><td class="px-3 py-3 font-semibold">Rp {{ number_format($total, 0, ',', '.') }}</td><td class="max-w-[130px] truncate px-3 py-3">{{ $order->notes ?: '—' }}</td><td class="px-3 py-3">{{ \Carbon\Carbon::parse($order->pickup_at)->format('d-m-Y') }}</td>
                     <td class="px-3 py-3"><span class="{{ $statusStyles[$order->status][1] ?? 'bg-gray-100 text-gray-500' }} rounded-full px-2 py-1 text-[9px] font-semibold">{{ $statusStyles[$order->status][0] ?? $order->status }}</span></td>
-                    <td class="px-3 py-3"><div class="flex gap-1"><button @click="openEdit(@js($order->load('details.productVariant')))" class="rounded border border-gray-200 px-2 py-1 text-gray-500 hover:bg-gray-50">✎</button><button @click="openDelete('{{ route('owner.orders.destroy', $order) }}', 'P-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}')" class="rounded border border-red-100 bg-red-50 px-2 py-1 text-red-500">♜</button><a href="{{ route('owner.orders.print_label', $order) }}" class="rounded border border-gray-200 px-2 py-1 text-gray-500" title="Download label">▧</a></div></td>
+                    <td class="px-3 py-3"><div class="flex gap-1"><button @click="openEdit(@js($order->load('details.productVariant')))" class="rounded border border-gray-200 px-2 py-1 text-gray-500 hover:bg-gray-50">✎</button><button @click="openDelete('{{ route('owner.orders.destroy', $order) }}', 'P-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}')" class="rounded border border-red-100 bg-red-50 px-2 py-1 text-red-500">♜</button><button type="button" @click="openLabel(@js($order->load('details.productVariant')), '{{ route('owner.orders.print_label', $order) }}')" class="rounded border border-gray-200 px-2 py-1 text-gray-500" title="Preview label">▧</button></div></td>
                 </tr>
             @empty
                 <tr><td colspan="10" class="px-4 py-10 text-center text-xs text-gray-400">Belum ada data pesanan.</td></tr>
@@ -83,6 +84,26 @@
     </div>
 
     <div x-show="showDelete" style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4"><div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl"><h3 class="text-sm font-bold text-[#0f2137]">Hapus Pesanan?</h3><p class="mt-3 text-xs text-gray-500">Yakin ingin menghapus <strong x-text="deleteName"></strong>? Tindakan ini tidak bisa dibatalkan.</p><form :action="deleteAction" method="POST" class="mt-5 flex gap-2">@csrf @method('DELETE')<button class="flex-1 rounded-md bg-red-600 px-4 py-2 text-xs font-semibold text-white">Ya, Hapus</button><button type="button" @click="showDelete=false" class="flex-1 rounded-md border border-gray-200 px-4 py-2 text-xs">Batal</button></form></div></div>
+
+    <div x-cloak x-show="showLabel" @keydown.escape.window="showLabel=false" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
+        <div @click.away="showLabel=false" class="w-full max-w-sm rounded-xl bg-white p-3 shadow-xl">
+            <div class="flex items-center justify-between px-2 pb-2"><h3 class="text-sm font-bold text-[#0f2137]">Label Pesanan</h3><button type="button" @click="showLabel=false" class="text-gray-400">✕</button></div>
+            <div class="mx-2 rounded-md border border-dashed border-[#c28455] p-4 text-center text-xs text-[#0f2137]">
+                <div class="text-[10px] text-[#c28455]">DW Mochi</div>
+                <div class="my-3 text-base font-bold" x-text="labelOrder.customer_name"></div>
+                <div class="my-1 text-gray-500" x-text="labelOrder.customer_phone"></div>
+                <div class="my-1" x-text="'P-' + String(labelOrder.id).padStart(3, '0')"></div>
+                <template x-for="detail in labelOrder.details" :key="detail.id">
+                    <div class="my-1 text-gray-500" x-text="detail.quantity + ' pcs - ' + (detail.product_variant ? detail.product_variant.name : '')"></div>
+                </template>
+                <div class="my-1 text-gray-500" x-text="'Ambil: ' + formatPickup(labelOrder.pickup_at)"></div>
+            </div>
+            <div class="mt-3 flex gap-2 px-2">
+                <button type="button" @click="printLabel()" class="flex-1 rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white">⎙ Cetak</button>
+                <button type="button" @click="showLabel=false" class="flex-1 rounded-md border border-gray-200 px-4 py-2 text-xs text-gray-600">Tutup</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -90,11 +111,16 @@ function orderManager() {
     const variants = @json($variants->keyBy('id'));
     const empty = { customer_name: '', customer_phone: '', quantity: 1, variant_id: '', pickup_at: '', status: 'pending', notes: '' };
     return {
-        showForm: false, showWa: false, showDelete: false, editing: false, formAction: '{{ route('owner.orders.store') }}', deleteAction: '', deleteName: '', form: {...empty},
+        showForm: false, showWa: false, showDelete: false, showLabel: false, editing: false, formAction: '{{ route('owner.orders.store') }}', deleteAction: '', deleteName: '', labelOrder: { details: [] }, labelUrl: '', form: {...empty},
         get selectedPrice() { return (variants[this.form.variant_id] || {}).price || 0; },
         openCreate() { this.editing = false; this.form = {...empty}; this.formAction = '{{ route('owner.orders.store') }}'; this.showForm = true; },
         openEdit(order) { const d = order.details[0] || {}; this.editing = true; this.form = { customer_name: order.customer_name, customer_phone: order.customer_phone, quantity: d.quantity || 1, variant_id: d.product_variant_id || '', pickup_at: order.pickup_at.replace(' ', 'T').slice(0, 16), status: order.status, notes: order.notes || '' }; this.formAction = '{{ url('/owner/orders') }}/' + order.id; this.showForm = true; },
-        openDelete(action, name) { this.deleteAction = action; this.deleteName = name; this.showDelete = true; }
+        openDelete(action, name) { this.deleteAction = action; this.deleteName = name; this.showDelete = true; },
+        openLabel(order, url) { this.labelOrder = order; this.labelUrl = url; this.showLabel = true; },
+        printLabel() {
+            window.open(this.labelUrl, 'labelPrintPopup', 'width=520,height=720,resizable=yes,scrollbars=yes');
+        },
+        formatPickup(value) { return new Date(value.replace(' ', 'T')).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
     }
 }
 </script>

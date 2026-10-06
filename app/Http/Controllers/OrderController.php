@@ -120,6 +120,6 @@ class OrderController extends Controller
         $pdf = Pdf::loadView('owner.orders.label_pdf', compact('order'))
                   ->setPaper('a6', 'portrait');
 
-        return $pdf->download('Label_Pesanan_'.$order->customer_name.'.pdf');
+        return $pdf->stream('Label_Pesanan_'.$order->customer_name.'.pdf');
     }
 }

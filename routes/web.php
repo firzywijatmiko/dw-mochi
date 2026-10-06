@@ -37,8 +37,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('expenses', \App\Http\Controllers\ExpenseController::class)->except(['create', 'edit', 'show']);
         // Rute Laporan Operasional Mingguan[cite: 22]
         Route::get('/reports/weekly', [\App\Http\Controllers\ReportController::class, 'weeklyReport'])->name('reports.weekly');
-        Route::resource('product_variants', ProductVariantController::class);
-    });
+        // Rute CRUD Product Variant (Disesuaikan menggunakan except seperti Employees)
+        Route::resource('product_variants', ProductVariantController::class)->except(['create', 'edit', 'show']);    });
 
     // --- GRUP KARYAWAN ---
     Route::middleware(['role:Karyawan'])->prefix('karyawan')->name('karyawan.')->group(function () {

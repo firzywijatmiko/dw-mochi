@@ -16,6 +16,7 @@ class EmployeeService
             // Buat akun login Karyawan (password default disamakan dengan nomor HP)
             $user = User::create([
                 'name' => $data['name'],
+                'username' => $data['username'],
                 'phone' => $data['phone'],
                 'password' => Hash::make($data['phone']), 
                 'role' => 'Karyawan',
@@ -54,6 +55,7 @@ class EmployeeService
             // Update detail gaji
             $employee->update([
                 'name' => $data['name'],
+                'username' => $data['username'],
                 'base_daily_wage' => $data['base_daily_wage'],
                 'overtime_rate_1x' => $data['overtime_rate_1x'] ?? 0,
                 'overtime_rate_2x' => $data['overtime_rate_2x'] ?? 0,

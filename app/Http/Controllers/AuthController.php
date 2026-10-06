@@ -25,29 +25,23 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Validasi input form (menggunakan Nomor HP sesuai prototype dan RAT)
+        // Validasi input form (menggunakan username)
         $credentials = $request->validate([
-            'phone'    => ['required', 'string'],
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
 
-        // Cek kredensial ke database
+        // Cek kredensial ke database menggunakan username
         if (Auth::attempt($credentials)) {
-            // Jika berhasil, buat session baru untuk mencegah session fixation
             $request->session()->regenerate();
-
             $user = Auth::user();
-
-            // Cek duplikasi data akun (opsional, Laravel handle single session per device via Auth, 
-            // tapi ini memenuhi poin "Cek Duplikasi Data Akun" di Activity Diagram)
-
             return $this->redirectBasedOnRole($user->role);
         }
 
-        // Jika salah, kembalikan pesan error sesuai Activity Diagram
+        // Kembalikan pesan error jika gagal
         return back()->withErrors([
-            'phone' => 'Nomor HP atau password salah.',
-        ])->onlyInput('phone');
+            'username' => 'Username atau password salah.',
+        ])->onlyInput('username');
     }
 
     /**

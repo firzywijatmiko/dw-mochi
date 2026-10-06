@@ -20,7 +20,7 @@ class CreateEmployeesTable extends Migration
             $table->decimal('base_daily_wage', 10, 2);
             $table->decimal('overtime_rate_1x', 10, 2);
             $table->decimal('overtime_rate_2x', 10, 2);
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->enum('status', ['Aktif', 'Nonaktif'])->default('Aktif');
             $table->timestamps();
         });
     }

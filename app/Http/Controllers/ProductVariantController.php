@@ -22,16 +22,7 @@ class ProductVariantController extends Controller
     public function index()
     {
         $variants = $this->variantService->getAllVariants();
-        
-        return view('product_variants.index', compact('variants'));
-    }
-
-    /**
-     * Menampilkan form untuk membuat variant baru.
-     */
-    public function create()
-    {
-        return view('product_variants.create');
+        return view('owner.product_variants.index', compact('variants')); // Baris ini mencari file di folder product_variants
     }
 
     /**
@@ -42,32 +33,17 @@ class ProductVariantController extends Controller
         $validatedData = $request->validate([
             'name'      => 'required|string|max:255',
             'price'     => 'required|numeric',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        $validatedData['is_active'] = $request->has('is_active');
+        // Mengatur is_active menjadi true sebagai default jika tidak dikirim (sesuai input hidden di form)
+        $validatedData['is_active'] = $request->input('is_active', 1);
 
         // Memanggil service untuk menyimpan data
         $this->variantService->createVariant($validatedData);
 
-        return redirect()->route('product_variants.index')
+        return redirect()->route('owner.product_variants.index')
                          ->with('success', 'Variant produk berhasil ditambahkan.');
-    }
-
-    /**
-     * Menampilkan detail product variant spesifik.
-     */
-    public function show(ProductVariant $productVariant)
-    {
-        return view('product_variants.show', compact('productVariant'));
-    }
-
-    /**
-     * Menampilkan form untuk mengedit variant spesifik.
-     */
-    public function edit(ProductVariant $productVariant)
-    {
-        return view('product_variants.edit', compact('productVariant'));
     }
 
     /**
@@ -78,15 +54,15 @@ class ProductVariantController extends Controller
         $validatedData = $request->validate([
             'name'      => 'required|string|max:255',
             'price'     => 'required|numeric',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        $validatedData['is_active'] = $request->has('is_active');
+        $validatedData['is_active'] = $request->input('is_active', 1);
 
         // Memanggil service untuk memperbarui data
         $this->variantService->updateVariant($productVariant, $validatedData);
 
-        return redirect()->route('product_variants.index')
+        return redirect()->route('owner.product_variants.index')
                          ->with('success', 'Variant produk berhasil diperbarui.');
     }
 
@@ -98,7 +74,7 @@ class ProductVariantController extends Controller
         // Memanggil service untuk menghapus data
         $this->variantService->deleteVariant($productVariant);
 
-        return redirect()->route('product_variants.index')
+        return redirect()->route('owner.product_variants.index')
                          ->with('success', 'Variant produk berhasil dihapus.');
     }
 }

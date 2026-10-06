@@ -12,20 +12,22 @@ class UserSeeder extends Seeder
     {
         // Akun Owner
         User::create([
-            'name' => 'Ibu Dwi',
-            'phone' => '081234567890',
-            'password' => Hash::make('mochi123'), // Sesuai info demo di prototype desain
-            'role' => 'Owner',
-            'status' => 'Aktif',
+            'name'     => 'Dwi Wulandari',
+            'username' => 'ownerDWMochi',
+            'phone'    => '081234567890',
+            'password' => Hash::make('mochi123'),
+            'role'     => 'Owner',
+            'status'   => 'Aktif',
         ]);
 
         // Akun Karyawan
         User::create([
-            'name' => 'Widyawati',
-            'phone' => '089876543210',
+            'name'     => 'Widyawati',
+            'username' => 'widyawati',
+            'phone'    => '089876543210',
             'password' => Hash::make('karyawan123'),
-            'role' => 'Karyawan',
-            'status' => 'Aktif',
+            'role'     => 'Karyawan',
+            'status'   => 'Aktif',
         ]);
     }
 }

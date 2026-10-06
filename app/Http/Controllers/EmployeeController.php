@@ -25,12 +25,13 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         // Validasi Kelengkapan Data dan Cek Duplikasi Nomor HP[cite: 16]
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|unique:users,phone',
-            'base_daily_wage' => 'required|numeric',
+            $validated = $request->validate([
+            'name'             => 'required|string|max:255',
+            'username'         => 'required|string|max:255|unique:users,username', // TAMBAHKAN VALIDASI INI
+            'phone'            => 'required|string',
+            'base_daily_wage'  => 'required|numeric',
             'overtime_rate_1x' => 'nullable|numeric',
-            'status' => 'required|in:Aktif,Nonaktif',
+            'status'           => 'required|in:Aktif,Nonaktif',
         ]);
 
         $this->employeeService->storeEmployee($validated);
@@ -41,12 +42,13 @@ class EmployeeController extends Controller
     public function update(Request $request, Employee $employee)
     {
         // Validasi Perubahan Data dan Cek Duplikasi (abaikan nomor HP milik sendiri)[cite: 17]
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|unique:users,phone,' . $employee->users_id,
-            'base_daily_wage' => 'required|numeric',
+            $validated = $request->validate([
+            'name'             => 'required|string|max:255',
+            'username'         => 'required|string|max:255|unique:users,username,' . $employee->users_id, // TAMBAHKAN VALIDASI INI
+            'phone'            => 'required|string',
+            'base_daily_wage'  => 'required|numeric',
             'overtime_rate_1x' => 'nullable|numeric',
-            'status' => 'required|in:Aktif,Nonaktif',
+            'status'           => 'required|in:Aktif,Nonaktif',
         ]);
 
         $this->employeeService->updateEmployee($employee, $validated);

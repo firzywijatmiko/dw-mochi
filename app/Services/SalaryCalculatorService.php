@@ -3,42 +3,37 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\Employee;
 use Carbon\Carbon;
 
 class SalaryCalculatorService
 {
+    protected $payroll;
+
+    public function __construct(PayrollService $payroll)
+    {
+        $this->payroll = $payroll;
+    }
+
+    /**
+     * Hitung jam reguler, lembur bertingkat (2x & 3x), dan gaji harian,
+     * lalu simpan ke tabel attendances. Aturan ada di config/payroll.php.
+     */
     public function calculateDailySalary(Attendance $attendance)
     {
-        $employee = $attendance->employee;
-        
-        $checkIn = Carbon::parse($attendance->check_in_at);
-        $checkOut = Carbon::parse($attendance->check_out_at);
-        
-        // Menghitung selisih jam
-        $totalHours = $checkIn->diffInHours($checkOut);
-        
-        // Logika dasar (Asumsi kerja reguler 7 jam, sisanya dihitung lembur)
-        $regularHours = $totalHours > 7 ? 7 : $totalHours;
-        $overtimeHours = $totalHours > 7 ? ($totalHours - 7) : 0;
+        $result = $this->payroll->calculateDay(
+            $attendance->employee,
+            $attendance->check_in_at ? Carbon::parse($attendance->check_in_at) : null,
+            $attendance->check_out_at ? Carbon::parse($attendance->check_out_at) : null
+        );
 
-        // Kalkulasi gaji
-        $dailyWage = $employee->base_daily_wage; // Gaji pokok harian
-        $overtimePay = $overtimeHours * $employee->overtime_rate_1x; // Asumsi tarif lembur 1x
-        
-        $totalDailySalary = $dailyWage + $overtimePay;
-
-        // Simpan hasil kalkulasi ke database sesuai Activity Diagram
-        $attendance->update([
-            'regular_hours' => $regularHours,
-            'overtime_1x' => $overtimeHours,
-            'daily_wage' => $totalDailySalary,
-        ]);
+        $attendance->update($result);
 
         return $attendance;
     }
 
     /**
-     * Mengambil riwayat presensi & estimasi gaji berjalan (Senin s/d Hari Ini) untuk satu Karyawan
+     * Riwayat presensi & estimasi gaji berjalan (Senin s/d hari ini) untuk satu karyawan.
      */
     public function getEmployeeSalaryHistory(Employee $employee)
     {
@@ -50,37 +45,35 @@ class SalaryCalculatorService
             ->orderBy('date', 'desc')
             ->get();
 
-        $totalEstimatedSalary = $attendances->sum('daily_wage');
-
         return [
-            'attendances' => $attendances,
-            'total_estimated_salary' => $totalEstimatedSalary,
-            'period' => $startOfWeek . ' s/d ' . $today
+            'attendances'            => $attendances,
+            'total_estimated_salary' => $attendances->sum('daily_wage'),
+            'period'                 => $startOfWeek . ' s/d ' . $today,
         ];
     }
 
     /**
-     * Mengambil rekap presensi dan total gaji seluruh karyawan berdasarkan filter tanggal
+     * Rekap presensi & total gaji seluruh karyawan berdasarkan filter tanggal.
+     * Key lama dipertahankan, ditambah rincian lembur per tingkat.
      */
     public function getAllEmployeesSalaryRecap($startDate, $endDate)
     {
-        $employees = Employee::with(['attendances' => function($query) use ($startDate, $endDate) {
+        $employees = Employee::with(['attendances' => function ($query) use ($startDate, $endDate) {
             $query->whereBetween('date', [$startDate, $endDate]);
         }])->get();
 
-        $recapData = $employees->map(function ($employee) {
-            $totalRegular = $employee->attendances->sum('regular_hours');
-            $totalOvertime = $employee->attendances->sum('overtime_1x') + $employee->attendances->sum('overtime_2x');
-            $totalSalary = $employee->attendances->sum('daily_wage');
+        return $employees->map(function ($employee) {
+            $att = $employee->attendances;
 
             return [
-                'employee' => $employee,
-                'total_regular_hours' => $totalRegular,
-                'total_overtime_hours' => $totalOvertime,
-                'total_salary' => $totalSalary
+                'employee'             => $employee,
+                'days_present'         => $att->whereNotNull('check_in_at')->count(),
+                'total_regular_hours'  => $att->sum('regular_hours'),
+                'overtime_1x'          => $att->sum('overtime_1x'),
+                'overtime_2x'          => $att->sum('overtime_2x'),
+                'total_overtime_hours' => $att->sum('overtime_1x') + $att->sum('overtime_2x'),
+                'total_salary'         => $att->sum('daily_wage'),
             ];
         });
-
-        return $recapData;
     }
 }

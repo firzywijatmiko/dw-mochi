@@ -48,6 +48,7 @@ class EmployeeService
             // Update akun user
             $employee->user->update([
                 'name' => $data['name'],
+                'username' => $data['username'],
                 'phone' => $data['phone'],
                 'status' => $data['status'],
             ]);
@@ -55,7 +56,6 @@ class EmployeeService
             // Update detail gaji
             $employee->update([
                 'name' => $data['name'],
-                'username' => $data['username'],
                 'base_daily_wage' => $data['base_daily_wage'],
                 'overtime_rate_1x' => $data['overtime_rate_1x'] ?? 0,
                 'overtime_rate_2x' => $data['overtime_rate_2x'] ?? 0,

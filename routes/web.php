@@ -3,14 +3,22 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\ReportController;
+use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\ProductVariantController;
 
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+*/
+
 Route::get('/', function () {
-    return redirect('/login');
+    return view('welcome');
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -52,3 +60,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/salary-history', [\App\Http\Controllers\AttendanceController::class, 'salaryHistory'])->name('salary_history');
     });
 });
+// Route Keuangan
+Route::get('/keuangan', [FinancialController::class, 'index']);
+Route::post('/keuangan/store', [FinancialController::class, 'store'])->name('financial.store');
+Route::put('/keuangan/update/{id}', [FinancialController::class, 'update'])->name('financial.update');
+Route::delete('/keuangan/delete/{id}', [FinancialController::class, 'destroy'])->name('financial.destroy');

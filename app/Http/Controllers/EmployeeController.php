@@ -28,7 +28,7 @@ class EmployeeController extends Controller
             $validated = $request->validate([
             'name'             => 'required|string|max:255',
             'username'         => 'required|string|max:255|unique:users,username', // TAMBAHKAN VALIDASI INI
-            'phone'            => 'required|string',
+            'phone'            => 'required|string|unique:users,phone', // ← tambahkan unique
             'base_daily_wage'  => 'required|numeric',
             'overtime_rate_1x' => 'nullable|numeric',
             'status'           => 'required|in:Aktif,Nonaktif',
@@ -45,7 +45,7 @@ class EmployeeController extends Controller
             $validated = $request->validate([
             'name'             => 'required|string|max:255',
             'username'         => 'required|string|max:255|unique:users,username,' . $employee->users_id, // TAMBAHKAN VALIDASI INI
-            'phone'            => 'required|string',
+            'phone'            => 'required|string|unique:users,phone,' . $employee->users_id, // ← tambahkan unique
             'base_daily_wage'  => 'required|numeric',
             'overtime_rate_1x' => 'nullable|numeric',
             'status'           => 'required|in:Aktif,Nonaktif',

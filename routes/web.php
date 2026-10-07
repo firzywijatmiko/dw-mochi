@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FinancialController;
 
 /*
@@ -14,12 +16,11 @@ use App\Http\Controllers\FinancialController;
 |
 */
 
-// Route Utama / Welcome
 Route::get('/', function () {
     return view('welcome');
 });
 
-// Route Keuangan & Laporan (Lengkap dengan Named Route agar sesuai dengan view Anda)
+// Route Keuangan
 Route::get('/keuangan', [FinancialController::class, 'index']);
 Route::post('/keuangan/store', [FinancialController::class, 'store'])->name('financial.store');
 Route::put('/keuangan/update/{id}', [FinancialController::class, 'update'])->name('financial.update');

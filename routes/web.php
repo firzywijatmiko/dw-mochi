@@ -39,7 +39,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports/weekly', [\App\Http\Controllers\ReportController::class, 'weeklyReport'])->name('reports.weekly');
         // Rute CRUD Product Variant (Disesuaikan menggunakan except seperti Employees)
         Route::resource('product_variants', ProductVariantController::class)->except(['create', 'edit', 'show']);    });
-
+        
     // --- GRUP KARYAWAN ---
     Route::middleware(['role:Karyawan'])->prefix('karyawan')->name('karyawan.')->group(function () {
         Route::get('/dashboard', function () {

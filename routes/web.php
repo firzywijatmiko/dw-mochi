@@ -61,7 +61,9 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 // Route Keuangan
-Route::get('/keuangan', [FinancialController::class, 'index']);
-Route::post('/keuangan/store', [FinancialController::class, 'store'])->name('financial.store');
-Route::put('/keuangan/update/{id}', [FinancialController::class, 'update'])->name('financial.update');
-Route::delete('/keuangan/delete/{id}', [FinancialController::class, 'destroy'])->name('financial.destroy');
+Route::middleware(['auth', 'role:Owner,Admin'])->group(function () {
+    Route::get('/keuangan', [FinancialController::class, 'index'])->name('financial.index');
+    Route::post('/keuangan/store', [FinancialController::class, 'store'])->name('financial.store');
+    Route::put('/keuangan/update/{id}', [FinancialController::class, 'update'])->name('financial.update');
+    Route::delete('/keuangan/delete/{id}', [FinancialController::class, 'destroy'])->name('financial.destroy');
+});

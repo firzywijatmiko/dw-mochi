@@ -15,6 +15,16 @@ class Attendance extends Model
         'regular_hours', 'overtime_1x', 'overtime_2x', 'daily_wage', 'notes'
     ];
 
+    protected $casts = [
+        'date'          => 'date',
+        'check_in_at'   => 'datetime',
+        'check_out_at'  => 'datetime',
+        'regular_hours' => 'float',
+        'overtime_1x'   => 'float',
+        'overtime_2x'   => 'float',
+        'daily_wage'    => 'float',
+    ];
+
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employees_id');

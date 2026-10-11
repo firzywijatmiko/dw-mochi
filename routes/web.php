@@ -34,6 +34,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
         // Rute Rekap Presensi dan Gaji Owner[cite: 24]
         Route::get('/attendances/recap', [\App\Http\Controllers\AttendanceController::class, 'recap'])->name('attendances.recap');
+        Route::get('/payrolls', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payrolls.index');
+        Route::post('/payrolls/generate', [\App\Http\Controllers\PayrollController::class, 'generate'])->name('payrolls.generate');
+        Route::put('/payrolls/{payroll}/pay', [\App\Http\Controllers\PayrollController::class, 'markPaid'])->name('payrolls.pay');
+        Route::put('/payrolls/{payroll}/unlock', [\App\Http\Controllers\PayrollController::class, 'unlock'])->name('payrolls.unlock');
         // Rute CRUD Pesanan standar
         Route::resource('orders', \App\Http\Controllers\OrderController::class)->except(['create', 'edit', 'show']);
         // Rute Custom untuk Parsing WA & Print Label

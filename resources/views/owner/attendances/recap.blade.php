@@ -5,6 +5,7 @@
 
 @section('content')
 <div class="space-y-6">
+    @include('owner.partials.payroll_tabs')
 
     <!-- Filter Periode -->
     <form method="GET" action="{{ route('owner.attendances.recap') }}" class="flex items-end gap-3">

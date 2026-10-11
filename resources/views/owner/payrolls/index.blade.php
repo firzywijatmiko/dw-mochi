@@ -119,7 +119,7 @@
                                 <form method="POST" action="{{ route('owner.payrolls.unlock', $p->id) }}" onsubmit="return confirm('Buka kunci gaji ini? Status kembali ke Belum Dibayar dan bisa dihitung ulang dari presensi.')">
                                     @csrf
                                     @method('PUT')
-                                    <button type="submit" class="border border-gray-200 text-gray-600 px-2.5 py-1 rounded-lg text-[10px] hover:bg-gray-50 transition">Buka Kunci</button>
+                                    <button type="submit" class="bg-[#c28455] text-white px-2.5 py-1 rounded-lg text-[10px] font-medium hover:bg-[#a96f45] transition shadow-sm">Buka Kunci</button>
                                 </form>
                             </div>
                         @endif

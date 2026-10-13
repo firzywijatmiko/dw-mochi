@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\ProductVariantController;
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes

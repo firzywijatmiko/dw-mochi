@@ -65,7 +65,7 @@ class AuthController extends Controller
         if ($role === 'Owner' || $role === 'Admin') {
             return redirect()->intended('/owner/dashboard');
         } elseif ($role === 'Karyawan') {
-            return redirect()->intended('/karyawan/dashboard');
+            return redirect()->intended('/employee/dashboard'); 
         }
 
         Auth::logout();

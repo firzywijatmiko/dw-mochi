@@ -10,7 +10,6 @@ class PayrollService
 {
     /**
      * Hitung jam reguler, jam lembur, dan gaji harian dari jam masuk/pulang.
-     * Fungsi ini tidak menyentuh database sehingga mudah diuji.
      */
     public function calculateDay(Employee $employee, ?Carbon $checkIn, ?Carbon $checkOut): array
     {
@@ -32,9 +31,10 @@ class PayrollService
         $ot2 = $this->overlapHours($checkIn, $checkOut,
             $this->at($checkIn, $cfg['overtime_2x']['start']), $this->at($checkIn, $cfg['overtime_2x']['end']));
 
-        // Tarif lembur per jam: pakai nilai di data karyawan bila diisi,
-        // kalau 0 diturunkan dari gaji harian / 7 jam x pengali.
+        // Tarif lembur per jam
         $hourly = $employee->base_daily_wage / $cfg['regular_hours'];
+        
+        // PASTIKAN BARIS INI MENGGUNAKAN TANDA BINTANG (*) BUKAN MINUS
         $rate1  = $employee->overtime_rate_1x > 0 ? $employee->overtime_rate_1x : $hourly * $cfg['overtime_1x']['multiplier'];
         $rate2  = $employee->overtime_rate_2x > 0 ? $employee->overtime_rate_2x : $hourly * $cfg['overtime_2x']['multiplier'];
 
@@ -51,10 +51,6 @@ class PayrollService
         ];
     }
 
-    /**
-     * Hitung ulang lalu simpan ke tabel attendances.
-     * Panggil ini setelah check-out atau saat owner mengoreksi presensi.
-     */
     public function applyToAttendance(Attendance $attendance): Attendance
     {
         $result = $this->calculateDay(
@@ -67,9 +63,6 @@ class PayrollService
         return $attendance;
     }
 
-    /**
-     * Rentang periode gaji (Senin - Sabtu) dari sebuah tanggal.
-     */
     public function weekRange(Carbon $date): array
     {
         $start = $date->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
@@ -77,9 +70,6 @@ class PayrollService
         return [$start, $end];
     }
 
-    /**
-     * Ringkasan gaji satu karyawan untuk satu periode.
-     */
     public function summarizeEmployee(Employee $employee, Carbon $start, Carbon $end): array
     {
         $rows = $employee->attendances()
@@ -104,9 +94,6 @@ class PayrollService
         ];
     }
 
-    /**
-     * Ringkasan gaji semua karyawan untuk satu periode (untuk halaman rekap & laporan).
-     */
     public function summarizeAll(Carbon $start, Carbon $end): array
     {
         $employees = Employee::where('status', 'Aktif')
@@ -121,8 +108,6 @@ class PayrollService
             'total_wages' => $rows->sum('total'),
         ];
     }
-
-    // ---------- helper ----------
 
     private function at(Carbon $day, string $time): Carbon
     {

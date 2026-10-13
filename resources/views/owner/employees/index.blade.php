@@ -75,11 +75,11 @@
 
     <!-- MODAL FORM (TAMBAH / UBAH) -->
     <div x-show="isFormModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div @click.away="closeFormModal()" class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" x-transition>
+        <div @click.away="closeFormModal()" class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden" x-transition>
             
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-gray-800" x-text="isEdit ? 'Ubah Data Karyawan' : 'Tambah Karyawan Baru'"></h3>
-                <button @click="closeFormModal()" class="text-gray-400 hover:text-gray-600">
+                <button type="button" @click="closeFormModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
@@ -87,45 +87,60 @@
             <form :action="formAction" method="POST" class="p-6 space-y-4">
                 @csrf
                 <template x-if="isEdit">
-                    @method('PUT')
+                    <input type="hidden" name="_method" value="PUT">
                 </template>
 
+                <!-- Data Pribadi -->
+                <h4 class="text-xs font-bold text-gray-400 tracking-wider uppercase border-b pb-1 mb-2">Informasi Akun</h4>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Nama Karyawan *</label>
-                        <input type="text" name="name" x-model="formData.name" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] focus:border-[#0f2137] outline-none" placeholder="Nama lengkap">
+                        <input type="text" name="name" x-model="formData.name" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="Nama lengkap">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">No. HP *</label>
+                        <input type="text" name="phone" x-model="formData.phone" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="08xxxxxxxxxx">
                     </div>
                     <div>
                         <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Username Login *</label>
-                        <input type="text" name="username" x-model="formData.username" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] focus:border-[#0f2137] outline-none" placeholder="Contoh: karyawan01">
+                        <input type="text" name="username" x-model="formData.username" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="Contoh: karyawan01">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Password <span x-show="!isEdit">*</span></label>
+                        <input type="password" name="password" :required="!isEdit" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" :placeholder="isEdit ? 'Kosongkan jika tak ingin ganti' : 'Minimal 6 karakter'">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">No. HP *</label>
-                        <input type="text" name="phone" x-model="formData.phone" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] focus:border-[#0f2137] outline-none" placeholder="08xxxxxxxxxx">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Status</label>
-                        <select name="status" x-model="formData.status" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] focus:border-[#0f2137] outline-none bg-white">
+                <!-- Data Gaji & Status -->
+                <h4 class="text-xs font-bold text-gray-400 tracking-wider uppercase border-b pb-1 mt-4 mb-2">Detail Gaji & Status</h4>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="col-span-3 sm:col-span-1">
+                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Status Pekerja</label>
+                        <select name="status" x-model="formData.status" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none bg-white">
                             <option value="Aktif">Aktif</option>
                             <option value="Nonaktif">Nonaktif</option>
                         </select>
                     </div>
+                    
+                    <div class="col-span-3 sm:col-span-2 grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Gaji Harian (Rp)</label>
+                            <input type="number" name="base_daily_wage" x-model="formData.base_daily_wage" required class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-xs font-bold text-gray-800 outline-none" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-semibold text-gray-600 uppercase mb-1">Tarif Lbr 1x / Jam</label>
+                            <input type="number" name="overtime_rate_1x" x-model="formData.overtime_rate_1x" class="w-full px-3 py-2 border border-blue-200 bg-blue-50/50 rounded-lg text-xs outline-none" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-semibold text-gray-600 uppercase mb-1">Tarif Lbr 2x / Jam</label>
+                            <input type="number" name="overtime_rate_2x" x-model="formData.overtime_rate_2x" class="w-full px-3 py-2 border border-orange-200 bg-orange-50/50 rounded-lg text-xs outline-none" placeholder="0">
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Gaji Pokok Harian (Rp) *</label>
-                    <input type="number" name="base_daily_wage" x-model="formData.base_daily_wage" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] focus:border-[#0f2137] outline-none" placeholder="0">
-                </div>
-
-                <!-- Input tersembunyi untuk default lembur -->
-                <input type="hidden" name="overtime_rate_1x" value="0">
-
-                <div class="flex items-center gap-2 pt-4">
-                    <button type="submit" class="bg-[#0f2137] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#183252] transition" x-text="isEdit ? 'Simpan Perubahan' : 'Simpan'"></button>
+                <div class="flex items-center justify-end gap-2 pt-4 mt-2">
                     <button type="button" @click="closeFormModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">Batal</button>
+                    <button type="submit" class="bg-[#0f2137] text-white px-6 py-2 rounded-lg text-xs font-medium hover:bg-[#183252] transition" x-text="isEdit ? 'Simpan Perubahan' : 'Tambah Karyawan'"></button>
                 </div>
             </form>
         </div>
@@ -171,13 +186,15 @@
                 username: '',
                 phone: '',
                 status: 'Aktif',
-                base_daily_wage: ''
+                base_daily_wage: '',
+                overtime_rate_1x: '',
+                overtime_rate_2x: ''
             },
             
             openCreateModal() {
                 this.isEdit = false;
                 this.formAction = "{{ route('owner.employees.store') }}";
-                this.formData = { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '' };
+                this.formData = { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '', overtime_rate_1x: '0', overtime_rate_2x: '0' };
                 this.isFormModalOpen = true;
             },
             
@@ -191,7 +208,9 @@
                     username: employee.user ? employee.user.username : '',
                     phone: employee.user ? employee.user.phone : '', 
                     status: employee.status, 
-                    base_daily_wage: employee.base_daily_wage 
+                    base_daily_wage: employee.base_daily_wage,
+                    overtime_rate_1x: employee.overtime_rate_1x || 0,
+                    overtime_rate_2x: employee.overtime_rate_2x || 0
                 };
                 this.isFormModalOpen = true;
             },

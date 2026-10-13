@@ -18,7 +18,7 @@ class EmployeeService
                 'name' => $data['name'],
                 'username' => $data['username'],
                 'phone' => $data['phone'],
-                'password' => Hash::make($data['phone']), 
+                'password' => Hash::make($data['password']), 
                 'role' => 'Karyawan',
                 'status' => $data['status'],
             ]);

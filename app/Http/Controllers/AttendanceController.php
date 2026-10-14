@@ -125,7 +125,8 @@ class AttendanceController extends Controller
         $endDate = $request->input('end_date', Carbon::now()->endOfWeek()->toDateString());
 
         // Ambil data presensi seluruh karyawan dari database dan kalkulasi[cite: 24]
-        $recapData = $this->salaryService->getAllEmployeesSalaryRecap($startDate, $endDate);
+        $summary = $this->salaryService->getAllEmployeesSalaryRecap($startDate, $endDate);
+        $recapData = $summary['rows'] ?? collect();
 
         // Tampilkan halaman rekap presensi & nominal gaji[cite: 24]
         return view('owner.attendances.recap', compact('recapData', 'startDate', 'endDate'));

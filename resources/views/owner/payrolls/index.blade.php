@@ -1,12 +1,10 @@
 <!-- resources/views/owner/payrolls/index.blade.php -->
 @extends('layouts.app')
 
-@section('header_title', 'Presensi & Penggajian')
+@section('header_title', 'Penggajian')
 
 @section('content')
-<div class="space-y-6">
-
-    @include('owner.partials.payroll_tabs')
+<div x-data="payrollPage()" class="space-y-6">
 
     <!-- Flash Message -->
     @if(session('success'))
@@ -16,89 +14,80 @@
         <div class="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ $errors->first() }}</div>
     @endif
 
-    <!-- Kartu Ringkasan -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Total Gaji Belum Dibayar</p>
-            <h3 class="text-lg font-bold text-red-500">Rp {{ number_format($totalUnpaid, 0, ',', '.') }}</h3>
+    <!-- Ringkasan + filter -->
+    <div class="flex flex-wrap items-end gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-4 flex items-center gap-4">
+            <div class="p-3 bg-orange-50 text-[#c28455] rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-semibold text-[#c28455] uppercase tracking-wider mb-0.5">Total Belum Dibayar</p>
+                <p class="text-lg font-bold text-gray-800">Rp {{ number_format($totalUnpaid, 0, ',', '.') }}</p>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">
-                {{ $employeeId ? 'Total Riwayat Karyawan' : 'Total Gaji Periode Ini' }}
-            </p>
-            <h3 class="text-lg font-bold text-gray-800">Rp {{ number_format($payrolls->sum('total_pay'), 0, ',', '.') }}</h3>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Data Ditampilkan</p>
-            <h3 class="text-lg font-bold text-gray-800">{{ $payrolls->count() }} <span class="text-xs font-medium text-gray-500">Data</span></h3>
+
+        <form method="GET" action="{{ route('owner.payrolls.index') }}">
+            <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Filter Bulan</label>
+            <select name="month" onchange="this.form.submit()" class="px-3 py-2 border border-gray-200 rounded-lg text-xs bg-white focus:ring-1 focus:ring-[#0f2137] outline-none min-w-[140px]">
+                <option value="">Semua</option>
+                @foreach($monthOptions as $value => $label)
+                    <option value="{{ $value }}" {{ $month === $value ? 'selected' : '' }}>{{ $label }}</option>
+                @endforeach
+            </select>
+        </form>
+
+        <div>
+            <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Riwayat Karyawan</label>
+            <select x-model="empId" @change="open = empId !== ''" class="px-3 py-2 border border-gray-200 rounded-lg text-xs bg-white focus:ring-1 focus:ring-[#0f2137] outline-none min-w-[180px]">
+                <option value="">— Pilih karyawan —</option>
+                @foreach($employees as $emp)
+                    <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                @endforeach
+            </select>
         </div>
     </div>
 
-    <!-- Filter + Hitung Gaji -->
-    <div class="flex flex-wrap items-end justify-between gap-3">
-        <form method="GET" action="{{ route('owner.payrolls.index') }}" class="flex flex-wrap items-end gap-3">
-            <div>
-                <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Tanggal (dalam periode)</label>
-                <input type="date" name="date" value="{{ $date->toDateString() }}" class="px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
-            </div>
-            <div>
-                <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Karyawan (riwayat)</label>
-                <select name="employee_id" class="px-3 py-2 border border-gray-200 rounded-lg text-xs bg-white focus:ring-1 focus:ring-[#0f2137] outline-none">
-                    <option value="">Semua karyawan (per periode)</option>
-                    @foreach($employees as $emp)
-                        <option value="{{ $emp->id }}" {{ (string) $employeeId === (string) $emp->id ? 'selected' : '' }}>{{ $emp->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <button type="submit" class="bg-[#0f2137] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#183252] transition">Tampilkan</button>
-        </form>
-
-        <form method="POST" action="{{ route('owner.payrolls.generate') }}">
-            @csrf
-            <input type="hidden" name="date" value="{{ $date->toDateString() }}">
-            <button type="submit" class="bg-[#c28455] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#a96f45] transition shadow-sm">
-                Hitung Gaji Periode {{ $start->translatedFormat('d M') }} - {{ $end->translatedFormat('d M Y') }}
-            </button>
-        </form>
-    </div>
-
-    <!-- Tabel -->
+    <!-- Tabel penggajian -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100">
-            @if($employeeId)
-                <h3 class="font-bold text-gray-800 text-sm">Riwayat Gaji Karyawan</h3>
-            @else
-                <h3 class="font-bold text-gray-800 text-sm">Penggajian Periode {{ $start->translatedFormat('d M Y') }} - {{ $end->translatedFormat('d M Y') }}</h3>
-            @endif
-        </div>
         <table class="w-full text-left text-xs">
-            <thead class="bg-gray-50 text-gray-500 uppercase font-semibold text-[10px]">
+            <thead class="bg-gray-50 uppercase font-semibold text-[10px] text-[#c28455]">
                 <tr>
-                    <th class="px-6 py-4">Nama</th>
+                    <th class="px-6 py-4">Karyawan</th>
                     <th class="px-6 py-4">Periode</th>
-                    <th class="px-6 py-4">Hari Hadir</th>
                     <th class="px-6 py-4">Gaji Pokok</th>
-                    <th class="px-6 py-4">Uang Makan</th>
                     <th class="px-6 py-4">Lembur</th>
                     <th class="px-6 py-4">Total</th>
                     <th class="px-6 py-4">Status</th>
-                    <th class="px-6 py-4">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-gray-700 font-medium">
                 @forelse($payrolls as $p)
+                @php
+                    $name = $p->employee->name ?? '-';
+                    $paid = $p->status === 'Dibayar';
+                @endphp
                 <tr class="hover:bg-gray-50/50 transition">
-                    <td class="px-6 py-4">{{ $p->employee->name ?? '-' }}</td>
-                    <td class="px-6 py-4">{{ $p->period_start->translatedFormat('d M') }} - {{ $p->period_end->translatedFormat('d M Y') }}</td>
-                    <td class="px-6 py-4">{{ $p->days_present }} hari</td>
-                    <td class="px-6 py-4">Rp {{ number_format($p->base_pay, 0, ',', '.') }}</td>
-                    <td class="px-6 py-4">Rp {{ number_format($p->meal_pay, 0, ',', '.') }}</td>
-                    <td class="px-6 py-4">Rp {{ number_format($p->overtime_pay, 0, ',', '.') }}</td>
+                    <td class="px-6 py-4 font-semibold text-gray-800">{{ $name }}</td>
+                    <td class="px-6 py-4 text-gray-500">{{ $p->period_label }}</td>
+                    <td class="px-6 py-4 text-[#a96f45]">
+                        Rp {{ number_format($p->base_pay, 0, ',', '.') }}
+                        @if($p->meal_pay > 0)
+                            <p class="text-[10px] text-gray-400">+ uang makan Rp {{ number_format($p->meal_pay, 0, ',', '.') }}</p>
+                        @endif
+                    </td>
+                    <td class="px-6 py-4 text-[#a96f45]">Rp {{ number_format($p->overtime_pay, 0, ',', '.') }}</td>
                     <td class="px-6 py-4 font-bold text-gray-800">Rp {{ number_format($p->total_pay, 0, ',', '.') }}</td>
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 text-[10px] rounded-full {{ $p->status === 'Dibayar' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-red-50 text-red-600 border border-red-100' }}">
-                            {{ $p->status }}
-                        </span>
+                        <form method="POST" action="{{ route('owner.payrolls.status', $p->id) }}">
+                            @csrf
+                            @method('PUT')
+                            <select name="status" data-current="{{ $p->status }}"
+                                onchange="if (confirm('Ubah status gaji {{ addslashes($name) }}?')) { this.form.submit(); } else { this.value = this.dataset.current; }"
+                                class="px-2.5 py-1 text-[10px] rounded-full border cursor-pointer focus:outline-none {{ $paid ? 'bg-green-50 text-green-600 border-green-100' : 'bg-yellow-50 text-yellow-700 border-yellow-200' }}">
+                                <option value="Belum Dibayar" {{ !$paid ? 'selected' : '' }}>Belum Dibayar</option>
+                                <option value="Dibayar" {{ $paid ? 'selected' : '' }}>Sudah Dibayar</option>
+                            </select>
+                        </form>
                         @if(abs($p->difference) >= 1)
                             <p class="mt-1 text-[10px] text-amber-600">
                                 Presensi kini Rp {{ number_format($p->current_total, 0, ',', '.') }}
@@ -106,34 +95,67 @@
                             </p>
                         @endif
                     </td>
-                    <td class="px-6 py-4">
-                        @if($p->status !== 'Dibayar')
-                            <form method="POST" action="{{ route('owner.payrolls.pay', $p->id) }}" onsubmit="return confirm('Tandai gaji ini sudah dibayar? Data tidak akan ikut dihitung ulang.')">
-                                @csrf
-                                @method('PUT')
-                                <button type="submit" class="bg-[#c28455] text-white px-3 py-1.5 rounded-lg text-[10px] font-medium hover:bg-[#a96f45] transition shadow-sm">Tandai Dibayar</button>
-                            </form>
-                        @else
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] text-gray-400">{{ optional($p->paid_at)->translatedFormat('d M Y') }}</span>
-                                <form method="POST" action="{{ route('owner.payrolls.unlock', $p->id) }}" onsubmit="return confirm('Buka kunci gaji ini? Status kembali ke Belum Dibayar dan bisa dihitung ulang dari presensi.')">
-                                    @csrf
-                                    @method('PUT')
-                                    <button type="submit" class="bg-[#c28455] text-white px-2.5 py-1 rounded-lg text-[10px] font-medium hover:bg-[#a96f45] transition shadow-sm">Buka Kunci</button>
-                                </form>
-                            </div>
-                        @endif
-                    </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="9" class="px-6 py-8 text-center text-gray-400">
-                        Belum ada data gaji. Klik tombol "Hitung Gaji" untuk membuatnya dari data presensi.
-                    </td>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-400">Belum ada data gaji. Data muncul otomatis dari presensi karyawan.</td>
                 </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
+
+    <!-- MODAL RIWAYAT GAJI KARYAWAN -->
+    <div x-show="open" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div @click.away="open = false; empId = ''" class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6" x-transition>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-gray-800 text-sm">Riwayat Gaji — <span x-text="names[empId]"></span></h3>
+                <button type="button" @click="open = false; empId = ''" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <table class="w-full text-left text-xs">
+                <thead class="uppercase font-semibold text-[10px] text-[#c28455] bg-gray-50">
+                    <tr>
+                        <th class="px-3 py-3">Periode</th>
+                        <th class="px-3 py-3">Gaji Pokok</th>
+                        <th class="px-3 py-3">Lembur</th>
+                        <th class="px-3 py-3">Total</th>
+                        <th class="px-3 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-gray-700 font-medium">
+                    <template x-for="row in (histories[empId] || [])" :key="row.id">
+                        <tr>
+                            <td class="px-3 py-3 text-gray-500" x-text="row.period"></td>
+                            <td class="px-3 py-3 text-[#a96f45]" x-text="row.base"></td>
+                            <td class="px-3 py-3 text-[#a96f45]" x-text="row.overtime"></td>
+                            <td class="px-3 py-3 font-bold text-gray-800" x-text="row.total"></td>
+                            <td class="px-3 py-3">
+                                <span class="px-2.5 py-1 text-[10px] rounded-full border"
+                                      :class="row.paid ? 'bg-green-50 text-green-600 border-green-100' : 'bg-yellow-50 text-yellow-700 border-yellow-200'"
+                                      x-text="row.status"></span>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="!(histories[empId] || []).length">
+                        <tr><td colspan="5" class="px-3 py-6 text-center text-gray-400">Belum ada riwayat gaji.</td></tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+<script>
+    function payrollPage() {
+        return {
+            open: false,
+            empId: '',
+            histories: @json($histories),
+            names: @json($employeeNames),
+        }
+    }
+</script>
 @endsection

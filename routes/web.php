@@ -18,7 +18,13 @@ use App\Http\Controllers\ProductVariantController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    if (\Illuminate\Support\Facades\Auth::check()) {
+        return \Illuminate\Support\Facades\Auth::user()->role === 'Karyawan'
+            ? redirect()->route('karyawan.dashboard')
+            : redirect()->route('owner.dashboard');
+    }
+
+    return redirect()->route('login');
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -35,9 +41,7 @@ Route::middleware(['auth'])->group(function () {
         // Rute Rekap Presensi dan Gaji Owner[cite: 24]
         Route::get('/attendances/recap', [\App\Http\Controllers\AttendanceController::class, 'recap'])->name('attendances.recap');
         Route::get('/payrolls', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payrolls.index');
-        Route::post('/payrolls/generate', [\App\Http\Controllers\PayrollController::class, 'generate'])->name('payrolls.generate');
-        Route::put('/payrolls/{payroll}/pay', [\App\Http\Controllers\PayrollController::class, 'markPaid'])->name('payrolls.pay');
-        Route::put('/payrolls/{payroll}/unlock', [\App\Http\Controllers\PayrollController::class, 'unlock'])->name('payrolls.unlock');
+        Route::put('/payrolls/{payroll}/status', [\App\Http\Controllers\PayrollController::class, 'updateStatus'])->name('payrolls.status');
         // Rute CRUD Pesanan standar
         Route::resource('orders', \App\Http\Controllers\OrderController::class)->except(['create', 'edit', 'show']);
         // Rute Custom untuk Parsing WA & Print Label

@@ -12,6 +12,15 @@
                 <span class="block sm:inline">{{ session('success') }}</span>
             </div>
         @endif
+        @if ($errors->any())
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <ul class="text-sm list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         <!-- Card Ringkasan (Otomatis dari Controller jika menggunakan variabel $totalIncome, $totalExpense, $netProfit) -->
         <div class="grid grid-cols-3 gap-6">
@@ -58,9 +67,6 @@
                 </thead>
                 <tbody class="text-sm text-gray-600">
                     @forelse($expenses as $item)
-                    @php
-                        $primaryKey = array_values((array)$item)[0];
-                    @endphp
                     <tr class="border-b hover:bg-gray-50">
                         <td class="py-3 px-4">{{ $item->item_name }}</td>
                         <td class="py-3 px-4">Rp {{ number_format($item->amount, 0, ',', '.') }}</td>
@@ -69,19 +75,19 @@
                         <td class="py-3 px-4 text-center space-x-2">
                             <!-- Tombol Edit -->
                             <button @click="
-                                openEditModal = true; 
-                                editId = '{{ $primaryKey }}'; 
-                                editItemName = '{{ $item->item_name }}'; 
-                                editAmount = '{{ $item->amount }}'; 
-                                editDate = '{{ $item->expense_date }}'; 
-                                editNotes = '{{ $item->notes ?? '' }}';
+                                openEditModal = true;
+                                editId = {{ $item->id }};
+                                editItemName = {{ json_encode($item->item_name) }};
+                                editAmount = {{ json_encode($item->amount) }};
+                                editDate = {{ json_encode($item->expense_date) }};
+                                editNotes = {{ json_encode($item->notes ?? '') }};
                             " class="text-blue-600 hover:text-blue-800 font-medium" title="Edit">✏️ Edit</button>
 
                             <!-- Tombol Hapus -->
                             <button @click="
                                 openDeleteModal = true;
-                                deleteId = '{{ $primaryKey }}';
-                                deleteItemName = '{{ $item->item_name }}';
+                                deleteId = {{ $item->id }};
+                                deleteItemName = {{ json_encode($item->item_name) }};
                             " class="text-red-600 hover:text-red-800 font-medium" title="Hapus">🗑️ Hapus</button>
                         </td>
                     </tr>
@@ -111,7 +117,10 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nominal (Rp) *</label>
-                        <input type="number" name="amount" required placeholder="0" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
+                        <input type="number" name="amount" required placeholder="0"
+                        min="1" step="1" inputmode="numeric"
+                        onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault();"
+                        class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
                     </div>
                 </div>
 
@@ -151,7 +160,10 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nominal (Rp) *</label>
-                        <input type="number" name="amount" x-model="editAmount" required class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
+                        <input type="number" name="amount" x-model="editAmount" required
+                        min="1" step="1" inputmode="numeric"
+                        onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault();"
+                        class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
                     </div>
                 </div>
 

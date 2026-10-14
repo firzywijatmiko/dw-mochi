@@ -33,9 +33,12 @@ class FinancialController extends Controller
     {
         $validated = $request->validate([
             'item_name'    => 'required|string|max:255',
-            'amount'       => 'required|numeric|min:0',
+            'amount'       => 'required|integer|min:1',
             'expense_date' => 'required|date',
             'notes'        => 'nullable|string',
+        ], [
+            'amount.min'     => 'Nominal harus minimal Rp 1.',
+            'amount.integer' => 'Nominal harus berupa bilangan bulat.',
         ]);
 
         // Simpan data pengeluaran baru ke database
@@ -56,9 +59,12 @@ class FinancialController extends Controller
     {
         $validated = $request->validate([
             'item_name'    => 'required|string|max:255',
-            'amount'       => 'required|numeric|min:0',
+            'amount'       => 'required|integer|min:1',
             'expense_date' => 'required|date',
             'notes'        => 'nullable|string',
+        ], [
+            'amount.min'     => 'Nominal harus minimal Rp 1.',
+            'amount.integer' => 'Nominal harus berupa bilangan bulat.',
         ]);
 
         // Update data pengeluaran

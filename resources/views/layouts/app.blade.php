@@ -64,11 +64,18 @@
                         Karyawan
                     </a>
                     
-                    <!-- Menu Presensi & Penggajian -->
+                    <!-- Menu Presensi -->
                     <a href="{{ route('owner.attendances.recap') }}" 
-                    class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition {{ request()->routeIs('owner.attendances.*') || request()->routeIs('owner.payrolls.*') ? 'bg-[#e8d5c4] text-[#0f2137] font-semibold' : 'text-gray-300 hover:bg-white/10' }}">
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition {{ request()->routeIs('owner.attendances.*') ? 'bg-[#e8d5c4] text-[#0f2137] font-semibold' : 'text-gray-300 hover:bg-white/10' }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Presensi & Penggajian
+                        Presensi
+                    </a>
+
+                    <!-- Menu Penggajian -->
+                    <a href="{{ route('owner.payrolls.index') }}" 
+                    class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition {{ request()->routeIs('owner.payrolls.*') ? 'bg-[#e8d5c4] text-[#0f2137] font-semibold' : 'text-gray-300 hover:bg-white/10' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        Penggajian
                     </a>
 
                     <!-- Menu Keuangan -->

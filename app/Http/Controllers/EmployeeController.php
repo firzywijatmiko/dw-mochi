@@ -24,35 +24,35 @@ class EmployeeController extends Controller
 
     public function store(Request $request)
     {
-        // Validasi Kelengkapan Data dan Cek Duplikasi Nomor HP[cite: 16]
-            $validated = $request->validate([
+        $validated = $request->validate([
             'name'             => 'required|string|max:255',
-            'username'         => 'required|string|max:255|unique:users,username', // TAMBAHKAN VALIDASI INI
-            'phone'            => 'required|string|unique:users,phone', // ← tambahkan unique
+            'username'         => 'required|string|max:255|unique:users,username',
+            'phone'            => 'required|string|unique:users,phone',
+            'password'         => 'required|string|min:6', 
             'base_daily_wage'  => 'required|numeric',
             'overtime_rate_1x' => 'nullable|numeric',
+            'overtime_rate_2x' => 'nullable|numeric', // <-- TAMBAHKAN INI
             'status'           => 'required|in:Aktif,Nonaktif',
         ]);
 
         $this->employeeService->storeEmployee($validated);
-
         return redirect()->route('owner.employees.index')->with('success', 'Karyawan Berhasil Ditambahkan');
     }
 
     public function update(Request $request, Employee $employee)
     {
-        // Validasi Perubahan Data dan Cek Duplikasi (abaikan nomor HP milik sendiri)[cite: 17]
-            $validated = $request->validate([
+        $validated = $request->validate([
             'name'             => 'required|string|max:255',
-            'username'         => 'required|string|max:255|unique:users,username,' . $employee->users_id, // TAMBAHKAN VALIDASI INI
-            'phone'            => 'required|string|unique:users,phone,' . $employee->users_id, // ← tambahkan unique
+            'username'         => 'required|string|max:255|unique:users,username,' . $employee->users_id,
+            'password'         => 'nullable|string|min:6', // Ubah jadi nullable agar tidak wajib isi saat update jika tidak mau ganti password
+            'phone'            => 'required|string|unique:users,phone,' . $employee->users_id, 
             'base_daily_wage'  => 'required|numeric',
             'overtime_rate_1x' => 'nullable|numeric',
+            'overtime_rate_2x' => 'nullable|numeric', // <-- TAMBAHKAN INI
             'status'           => 'required|in:Aktif,Nonaktif',
         ]);
 
         $this->employeeService->updateEmployee($employee, $validated);
-
         return redirect()->route('owner.employees.index')->with('success', 'Karyawan Berhasil Diubah');
     }
 

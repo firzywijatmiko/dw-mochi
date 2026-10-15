@@ -12,7 +12,6 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
-        // Jika user sudah login, langsung arahkan ke dashboard sesuai role
         if (Auth::check()) {
             return $this->redirectBasedOnRole(Auth::user()->role);
         }
@@ -25,7 +24,6 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Validasi input form (menggunakan username)
         $credentials = $request->validate([
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
@@ -33,8 +31,17 @@ class AuthController extends Controller
 
         // Cek kredensial ke database menggunakan username
         if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
             $user = Auth::user();
+
+            // Cek apakah status user nonaktif (diblokir)
+            if (isset($user->status) && strtolower($user->status) === 'nonaktif') {
+                Auth::logout();
+                return back()->withErrors([
+                    'username' => 'Akun Anda sudah nonaktif dan tidak dapat mengakses sistem.',
+                ])->onlyInput('username');
+            }
+
+            $request->session()->regenerate();
             return $this->redirectBasedOnRole($user->role);
         }
 
@@ -65,7 +72,7 @@ class AuthController extends Controller
         if ($role === 'Owner' || $role === 'Admin') {
             return redirect()->intended('/owner/dashboard');
         } elseif ($role === 'Karyawan') {
-            return redirect()->intended('/karyawan/dashboard');
+            return redirect()->intended('/employee/dashboard'); 
         }
 
         Auth::logout();

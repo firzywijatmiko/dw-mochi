@@ -6,15 +6,11 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\ProductVariantController;
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
 */
 
 Route::get('/', function () {
@@ -33,43 +29,58 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Rute yang membutuhkan autentikasi
 Route::middleware(['auth'])->group(function () {
-    
+
+    // Alias global untuk kompatibilitas (opsional), tanpa nama route agar tidak bentrok
+    Route::get('/keuangan', [FinancialController::class, 'index']);
+    Route::post('/keuangan/store', [FinancialController::class, 'store']);
+    Route::put('/keuangan/update/{id}', [FinancialController::class, 'update']);
+    Route::delete('/keuangan/delete/{id}', [FinancialController::class, 'destroy']);
+
     // --- GRUP OWNER / ADMIN ---
     Route::middleware(['role:Owner,Admin'])->prefix('owner')->name('owner.')->group(function () {
-        // Rute Dashboard Statistik Owner[cite: 25]
+
+        // Rute Dashboard Statistik Owner
         Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
-        // Rute Rekap Presensi dan Gaji Owner[cite: 24]
+
+        // Rute Rekap Presensi dan Gaji Owner
         Route::get('/attendances/recap', [\App\Http\Controllers\AttendanceController::class, 'recap'])->name('attendances.recap');
+
         Route::get('/payrolls', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payrolls.index');
         Route::put('/payrolls/{payroll}/status', [\App\Http\Controllers\PayrollController::class, 'updateStatus'])->name('payrolls.status');
+        Route::get('/payrolls', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payrolls.index');
         // Rute CRUD Pesanan standar
         Route::resource('orders', \App\Http\Controllers\OrderController::class)->except(['create', 'edit', 'show']);
+
         // Rute Custom untuk Parsing WA & Print Label
         Route::post('/orders/parse-wa', [\App\Http\Controllers\OrderController::class, 'parseWhatsApp'])->name('orders.parse_wa');
         Route::get('/orders/{order}/print-label', [\App\Http\Controllers\OrderController::class, 'printLabel'])->name('orders.print_label');
+
         // Rute CRUD Karyawan
         Route::resource('employees', \App\Http\Controllers\EmployeeController::class)->except(['create', 'edit', 'show']);
-        // Rute Laporan Operasional Mingguan[cite: 22]
+
+        // Rute Laporan Operasional Mingguan
         Route::get('/reports/weekly', [\App\Http\Controllers\ReportController::class, 'weeklyReport'])->name('reports.weekly');
-        // Rute CRUD Product Variant (Disesuaikan menggunakan except seperti Employees)
-        Route::resource('product_variants', ProductVariantController::class)->except(['create', 'edit', 'show']);    });
-        
+
+        Route::resource('product_variants', ProductVariantController::class)->except(['create', 'edit', 'show']);
+
+        // Route Keuangan owner
+        Route::get('/keuangan', [FinancialController::class, 'index'])->name('financial.index');
+        Route::post('/keuangan/store', [FinancialController::class, 'store'])->name('financial.store');
+        Route::put('/keuangan/update/{id}', [FinancialController::class, 'update'])->name('financial.update');
+        Route::delete('/keuangan/delete/{id}', [FinancialController::class, 'destroy'])->name('financial.destroy');
+    });
+
     // --- GRUP KARYAWAN ---
-    Route::middleware(['role:Karyawan'])->prefix('karyawan')->name('karyawan.')->group(function () {
-        Route::get('/dashboard', function () {
-            return 'Ini Halaman Dashboard Karyawan DW Mochi'; // Ganti dengan view('karyawan.dashboard') nanti
-        })->name('dashboard');
-        // Rute Presensi (Menggunakan POST karena akan dikirim via AJAX dari titik koordinat perangkat)
+    Route::middleware(['role:Karyawan'])->prefix('employee')->name('employee.')->group(function () {
+
+        // Arahkan ke fungsi yang baru kita buat di atas
+        Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'employeeDashboard'])->name('dashboard');
+
+        // Rute Presensi
         Route::post('/attendances/check-in', [\App\Http\Controllers\AttendanceController::class, 'checkIn'])->name('attendances.check_in');
         Route::post('/attendances/check-out', [\App\Http\Controllers\AttendanceController::class, 'checkOut'])->name('attendances.check_out');
-        // Rute Lihat Riwayat & Total Gaji Berjalan Karyawan[cite: 23]
+
+        // Rute Lihat Riwayat & Total Gaji Berjalan Karyawan
         Route::get('/salary-history', [\App\Http\Controllers\AttendanceController::class, 'salaryHistory'])->name('salary_history');
     });
-});
-// Route Keuangan
-Route::middleware(['auth', 'role:Owner,Admin'])->group(function () {
-    Route::get('/keuangan', [FinancialController::class, 'index'])->name('financial.index');
-    Route::post('/keuangan/store', [FinancialController::class, 'store'])->name('financial.store');
-    Route::put('/keuangan/update/{id}', [FinancialController::class, 'update'])->name('financial.update');
-    Route::delete('/keuangan/delete/{id}', [FinancialController::class, 'destroy'])->name('financial.destroy');
 });

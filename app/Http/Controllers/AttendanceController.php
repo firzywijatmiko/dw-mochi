@@ -90,11 +90,30 @@ class AttendanceController extends Controller
     {
         $employee = Auth::user()->employee;
         
-        // Ambil data presensi & lembur dari database (Senin s/d Hari Ini) lalu kalkulasi[cite: 23]
-        $salaryData = $this->salaryService->getEmployeeSalaryHistory($employee);
+        // Ambil data presensi minggu ini atau sesuai kebutuhan aplikasimu
+        $attendancesList = \App\Models\Attendance::where('employees_id', $employee->id)
+            ->orderBy('date', 'desc')
+            ->get();
 
-        // Tampilkan halaman riwayat presensi & total gaji sementara[cite: 23]
-        return view('karyawan.salary_history', compact('salaryData'));
+        // Hitung total kehadiran, lembur, dan total gaji secara aman
+        $totalKehadiran = $attendancesList->count();
+        $totalLembur = $attendancesList->sum(function($att) {
+            return ($att->overtime_1x ?? 0) + ($att->overtime_2x ?? 0);
+        });
+        
+        // Hitung total gaji berdasarkan gaji harian dan lembur (atau sesuaikan dengan service gaji yang sudah ada di aplikasimu)
+        $totalGaji = $attendancesList->sum(function($att) {
+            return $att->daily_wage ?? 0;
+        });
+
+        $salaryData = [
+            'total_gaji'      => $totalGaji,
+            'total_kehadiran' => $totalKehadiran,
+            'total_lembur'    => $totalLembur,
+            'attendances'     => $attendancesList
+        ];
+
+        return view('employee.salary_history', compact('salaryData'));
     }
 
         /**

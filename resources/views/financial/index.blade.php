@@ -102,7 +102,7 @@
 
             <h3 class="text-lg font-bold text-gray-800 mb-4">Catat Pengeluaran Baru</h3>
 
-            <form action="{{ route('financial.store') }}" method="POST">
+            <form action="{{ route('owner.financial.store') }}" method="POST">
                 @csrf
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
@@ -141,7 +141,7 @@
 
             <h3 class="text-lg font-bold text-gray-800 mb-4">Edit Catatan Pengeluaran</h3>
 
-            <form :action="'/keuangan/update/' + editId" method="POST">
+            <form :action="'{{ url('/owner/keuangan/update') }}/' + editId" method="POST">
                 @csrf
                 @method('PUT')
                 <div class="grid grid-cols-2 gap-4 mb-4">
@@ -187,7 +187,7 @@
             <div class="flex space-x-3">
                 <button type="button" @click="openDeleteModal = false" class="flex-1 border border-gray-300 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50">Batal</button>
 
-                <form :action="'/keuangan/delete/' + deleteId" method="POST" class="flex-1">
+                <form :action="'{{ url('/owner/keuangan/delete') }}/' + deleteId" method="POST" class="flex-1">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded-lg text-xs font-semibold shadow">🗑️ Ya, Hapus</button>

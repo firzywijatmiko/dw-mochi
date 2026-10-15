@@ -12,38 +12,94 @@
                 <span class="block sm:inline">{{ session('success') }}</span>
             </div>
         @endif
-        @if ($errors->any())
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <ul class="text-sm list-disc list-inside">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
 
         <!-- Card Ringkasan (Otomatis dari Controller jika menggunakan variabel $totalIncome, $totalExpense, $netProfit) -->
         <div class="grid grid-cols-3 gap-6">
             <div class="bg-[#0a192f] text-white p-6 rounded-xl shadow">
                 <p class="text-xs text-gray-400 uppercase">Total Pemasukan</p>
-                <h3 class="text-2xl font-bold mt-1">Rp {{ isset($totalIncome) ? number_format($totalIncome, 0, ',', '.') : '9.450.000' }}</h3>
+                <h3 class="text-2xl font-bold mt-1">Rp {{ isset($totalIncome) ? number_format($totalIncome, 0, ',', '.') : '0' }}</h3>
             </div>
-            <div class="bg-white text-gray-800 p-6 rounded-xl shadow border">
+            <div class="bg-white text-<p class="text-xs text-gray-500 uppercase">Total Pengeluaran</p>
+                <h3-800 p-6 rounded-xl shadow border">
                 <p class="text-xs text-gray-500 uppercase">Total Pengeluaran</p>
-                <h3 class="text-2xl font-bold mt-1">Rp {{ isset($totalExpense) ? number_format($totalExpense, 0, ',', '.') : '732.000' }}</h3>
+                <h3 class="text-2xl font-bold mt-1">Rp {{ isset($totalExpense) ? number_format($totalExpense, 0, ',', '.') : '0' }}</h3>
+                <p class="text-[10px] text-gray-400 mt-1">Bahan baku + gaji karyawan</p>
             </div>
             <div class="bg-white text-gray-800 p-6 rounded-xl shadow border">
                 <p class="text-xs text-gray-500 uppercase">Keuntungan Bersih</p>
-                <h3 class="text-2xl font-bold mt-1">Rp {{ isset($netProfit) ? number_format($netProfit, 0, ',', '.') : '8.718.000' }}</h3>
+                <h3 class="text-2xl font-bold mt-1">Rp {{ isset($netProfit) ? number_format($netProfit, 0, ',', '.') : '0' }}</h3>
             </div>
         </div>
 
-        <!-- Grafik Tren Pemasukan & Pengeluaran (Mingguan) - belum tersambung ke data asli -->
+        <!-- Grafik Tren Pemasukan & Pengeluaran (Mingguan) -->
+        @php
+            $short = function ($n) {
+                if ($n >= 1000000) {
+                    return rtrim(rtrim(number_format($n / 1000000, 2, ',', '.'), '0'), ',') . 'jt';
+                }
+                if ($n > 0) {
+                    return rtrim(rtrim(number_format($n / 1000, 1, ',', '.'), '0'), ',') . 'rb';
+                }
+                return '0';
+            };
+            $hasChartData = collect($chartData)->contains(function ($w) { return $w['income'] > 0 || $w['expense'] > 0; });
+        @endphp
         <div class="bg-white rounded-xl shadow p-6">
             <h3 class="font-bold text-gray-700 mb-4">Tren Pemasukan & Pengeluaran (Mingguan)</h3>
-            <div class="h-48 flex flex-col items-center justify-center text-gray-400 border border-dashed border-gray-200 rounded-lg">
-                <p class="text-sm font-medium">Grafik belum tersedia</p>
-                <p class="text-xs">Akan ditampilkan setelah tersambung ke data pemasukan dan pengeluaran.</p>
+
+            <div class="flex">
+                <!-- Sumbu Y -->
+                <div class="flex flex-col justify-between text-[11px] text-gray-400 pr-3 h-48 text-right select-none">
+                    <span>{{ $short($chartMax) }}</span>
+                    <span>{{ $short($chartMax * 0.75) }}</span>
+                    <span>{{ $short($chartMax * 0.5) }}</span>
+                    <span>{{ $short($chartMax * 0.25) }}</span>
+                    <span>0</span>
+                </div>
+
+                <div class="flex-1">
+                    <!-- Area batang -->
+                    <div class="relative h-48 border-b border-l border-gray-200 flex items-end justify-around px-4">
+                        <div class="absolute inset-x-0 top-0 border-t border-dashed border-gray-100"></div>
+                        <div class="absolute inset-x-0 top-1/4 border-t border-dashed border-gray-100"></div>
+                        <div class="absolute inset-x-0 top-2/4 border-t border-dashed border-gray-100"></div>
+                        <div class="absolute inset-x-0 top-3/4 border-t border-dashed border-gray-100"></div>
+
+                        @foreach($chartData as $w)
+                            @php
+                                $incomePct  = $w['income']  > 0 ? max($w['income']  / $chartMax * 100, 1.5) : 0;
+                                $expensePct = $w['expense'] > 0 ? max($w['expense'] / $chartMax * 100, 1.5) : 0;
+                            @endphp
+                            <div class="flex-1 h-full flex items-end justify-center gap-1 z-10">
+                                <div class="w-5 bg-[#0a192f] rounded-t" style="height: {{ $incomePct }}%;" title="Pemasukan {{ $w['label'] }}: Rp {{ number_format($w['income'], 0, ',', '.') }}"></div>
+                                <div class="w-5 bg-[#8c6d53] rounded-t" style="height: {{ $expensePct }}%;" title="Pengeluaran {{ $w['label'] }}: Rp {{ number_format($w['expense'], 0, ',', '.') }}"></div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <!-- Label minggu -->
+                    <div class="flex justify-around px-4 mt-2">
+                        @foreach($chartData as $w)
+                            <span class="flex-1 text-center text-[10px] text-gray-500">{{ $w['label'] }}</span>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            @unless($hasChartData)
+                <p class="text-center text-[11px] text-gray-400 mt-3">Belum ada pemasukan atau pengeluaran pada 5 minggu terakhir.</p>
+            @endunless
+
+            <!-- Legenda -->
+            <div class="flex justify-center items-center space-x-6 mt-4">
+                <div class="flex items-center space-x-2">
+                    <span class="w-3 h-3 bg-[#0a192f] rounded-sm inline-block"></span>
+                    <span class="text-xs text-gray-600">Pemasukan</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="w-3 h-3 bg-[#8c6d53] rounded-sm inline-block"></span>
+                    <span class="text-xs text-gray-600">Pengeluaran (bahan baku + gaji)</span>
+                </div>
             </div>
         </div>
 
@@ -67,6 +123,9 @@
                 </thead>
                 <tbody class="text-sm text-gray-600">
                     @forelse($expenses as $item)
+                    @php
+                        $primaryKey = array_values((array)$item)[0];
+                    @endphp
                     <tr class="border-b hover:bg-gray-50">
                         <td class="py-3 px-4">{{ $item->item_name }}</td>
                         <td class="py-3 px-4">Rp {{ number_format($item->amount, 0, ',', '.') }}</td>
@@ -75,19 +134,19 @@
                         <td class="py-3 px-4 text-center space-x-2">
                             <!-- Tombol Edit -->
                             <button @click="
-                                openEditModal = true;
-                                editId = {{ $item->id }};
-                                editItemName = {{ json_encode($item->item_name) }};
-                                editAmount = {{ json_encode($item->amount) }};
-                                editDate = {{ json_encode($item->expense_date) }};
-                                editNotes = {{ json_encode($item->notes ?? '') }};
+                                openEditModal = true; 
+                                editId = '{{ $primaryKey }}'; 
+                                editItemName = '{{ $item->item_name }}'; 
+                                editAmount = '{{ $item->amount }}'; 
+                                editDate = '{{ $item->expense_date }}'; 
+                                editNotes = '{{ $item->notes ?? '' }}';
                             " class="text-blue-600 hover:text-blue-800 font-medium" title="Edit">✏️ Edit</button>
 
                             <!-- Tombol Hapus -->
                             <button @click="
                                 openDeleteModal = true;
-                                deleteId = {{ $item->id }};
-                                deleteItemName = {{ json_encode($item->item_name) }};
+                                deleteId = '{{ $primaryKey }}';
+                                deleteItemName = '{{ $item->item_name }}';
                             " class="text-red-600 hover:text-red-800 font-medium" title="Hapus">🗑️ Hapus</button>
                         </td>
                     </tr>
@@ -117,10 +176,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nominal (Rp) *</label>
-                        <input type="number" name="amount" required placeholder="0"
-                        min="1" step="1" inputmode="numeric"
-                        onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault();"
-                        class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
+                        <input type="number" name="amount" required placeholder="0" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
                     </div>
                 </div>
 
@@ -160,10 +216,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nominal (Rp) *</label>
-                        <input type="number" name="amount" x-model="editAmount" required
-                        min="1" step="1" inputmode="numeric"
-                        onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault();"
-                        class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
+                        <input type="number" name="amount" x-model="editAmount" required class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
                     </div>
                 </div>
 

@@ -32,7 +32,7 @@
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-0.5">Total Gaji Periode</p>
-            <h3 class="text-lg font-bold text-gray-800">Rp {{ number_format($recapData->sum('total_salary'), 0, ',', '.') }}</h3>
+            <h3 class="text-lg font-bold text-gray-800">Rp {{ number_format($recapData->sum('total'), 0, ',', '.') }}</h3>
         </div>
     </div>
 
@@ -58,10 +58,10 @@
                 <tr class="hover:bg-gray-50/50 transition">
                     <td class="px-6 py-4">{{ $row['employee']->name }}</td>
                     <td class="px-6 py-4">{{ $row['days_present'] }} hari</td>
-                    <td class="px-6 py-4">{{ $row['total_regular_hours'] }} jam</td>
+                    <td class="px-6 py-4">{{ $row['regular_hours'] }} jam</td>
                     <td class="px-6 py-4">{{ $row['overtime_1x'] }} jam</td>
                     <td class="px-6 py-4">{{ $row['overtime_2x'] }} jam</td>
-                    <td class="px-6 py-4 font-bold text-gray-800">Rp {{ number_format($row['total_salary'], 0, ',', '.') }}</td>
+                    <td class="px-6 py-4 font-bold text-gray-800">Rp {{ number_format($row['total'], 0, ',', '.') }}</td>
                 </tr>
                 @empty
                 <tr>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,45 @@ class FinancialController extends Controller
 
         $netProfit = $totalIncome - $totalExpense;
 
-        return view('financial.index', compact('expenses', 'totalIncome', 'totalExpense', 'netProfit'));
+        // Data grafik tren: pemasukan vs pengeluaran, 5 minggu terakhir (Senin-Minggu)
+        $chartData = [];
+        $firstWeek = Carbon::now()->startOfWeek(Carbon::MONDAY)->subWeeks(4);
+
+        for ($i = 0; $i < 5; $i++) {
+            $start = $firstWeek->copy()->addWeeks($i)->startOfDay();
+            $end   = $start->copy()->addDays(6)->endOfDay();
+
+            $income = (float) DB::table('order_details')
+                ->join('orders', 'orders.id', '=', 'order_details.order_id')
+                ->where('orders.status', 'completed')
+                ->whereBetween('orders.updated_at', [$start, $end])
+                ->sum(DB::raw('order_details.quantity * order_details.unit_price'));
+
+            $material = (float) DB::table('raw_material_expenses')
+                ->whereBetween('expense_date', [$start->toDateString(), $end->toDateString()])
+                ->sum('amount');
+
+            $wage = (float) DB::table('attendances')
+                ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+                ->sum('daily_wage');
+
+            $chartData[] = [
+                'label'   => $start->copy()->locale('id')->translatedFormat('j M'),
+                'income'  => $income,
+                'expense' => $material + $wage,
+            ];
+        }
+
+        // Batas atas sumbu Y dibulatkan ke angka yang rapi
+        $highest = max(array_merge([0], array_column($chartData, 'income'), array_column($chartData, 'expense')));
+        if ($highest <= 0) {
+            $chartMax = 100000;
+        } else {
+            $unit     = pow(10, floor(log10($highest)));
+            $chartMax = ceil($highest / $unit) * $unit;
+        }
+
+        return view('financial.index', compact('expenses', 'totalIncome', 'totalExpense', 'netProfit', 'chartData', 'chartMax'));
     }
 
     public function store(Request $request)

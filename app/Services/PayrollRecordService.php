@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Attendance;
 use App\Models\Payroll;
 use Carbon\Carbon;
 
@@ -57,6 +58,34 @@ class PayrollRecordService
         }
 
         return ['updated' => $updated, 'skipped_paid' => $skippedPaid];
+    }
+
+    /**
+     * Sinkronkan data gaji dari presensi untuk beberapa minggu terakhir.
+     * Gaji berstatus Dibayar tidak diubah. Dipanggil saat halaman Penggajian dibuka.
+     */
+    public function syncFromAttendances(int $maxWeeks = 12): void
+    {
+        $first = Attendance::whereNotNull('check_in_at')->min('date');
+
+        if (!$first) {
+            return;
+        }
+
+        $cursor = Carbon::parse($first)->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $limit  = Carbon::now()->subWeeks($maxWeeks)->startOfWeek(Carbon::MONDAY)->startOfDay();
+
+        if ($cursor->lt($limit)) {
+            $cursor = $limit;
+        }
+
+        $today = Carbon::now();
+
+        while ($cursor->lte($today)) {
+            [$start, $end] = $this->payroll->weekRange($cursor);
+            $this->generate($start, $end);
+            $cursor->addWeek();
+        }
     }
 
     public function markAsPaid(Payroll $record): Payroll

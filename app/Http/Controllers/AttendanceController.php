@@ -8,6 +8,7 @@ use App\Services\LocationValidationService;
 use App\Services\SalaryCalculatorService;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\Employee;
 
 class AttendanceController extends Controller
 {
@@ -115,20 +116,27 @@ class AttendanceController extends Controller
         return view('employee.salary_history', compact('salaryData'));
     }
 
-    /**
+        /**
      * ACTIVITY DIAGRAM: REKAP PRESENSI & GAJI (OWNER)[cite: 24]
      */
     public function recap(Request $request)
     {
-        // Pilih filter tanggal (default: minggu ini jika tidak ada input)[cite: 24]
-        $startDate = $request->input('start_date', Carbon::now()->startOfWeek()->toDateString());
-        $endDate = $request->input('end_date', Carbon::now()->endOfWeek()->toDateString());
+        $date = $request->filled('date') ? Carbon::parse($request->date) : Carbon::today();
 
-        // Ambil data presensi seluruh karyawan dari database dan kalkulasi[cite: 24]
-        $summary = $this->salaryService->getAllEmployeesSalaryRecap($startDate, $endDate);
-        $recapData = $summary['rows'] ?? collect();
+        $attendances = Attendance::with('employee')
+            ->whereDate('date', $date->toDateString())
+            ->orderBy('check_in_at')
+            ->get();
 
-        // Tampilkan halaman rekap presensi & nominal gaji[cite: 24]
-        return view('owner.attendances.recap', compact('recapData', 'startDate', 'endDate'));
+        $totalEmployees = Employee::where('status', 'Aktif')->count();
+        $present = $attendances->whereNotNull('check_in_at')->count();
+
+        $summary = [
+            'present' => $present,
+            'absent'  => max($totalEmployees - $present, 0),
+            'outside' => $attendances->where('location_status', 'Luar Radius')->count(),
+        ];
+
+        return view('owner.attendances.recap', compact('date', 'attendances', 'summary'));
     }
 }

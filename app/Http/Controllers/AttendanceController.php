@@ -97,27 +97,27 @@ class AttendanceController extends Controller
         return view('karyawan.salary_history', compact('salaryData'));
     }
 
-    /**
+        /**
      * ACTIVITY DIAGRAM: REKAP PRESENSI & GAJI (OWNER)[cite: 24]
      */
     public function recap(Request $request)
-{
-    $date = $request->filled('date') ? Carbon::parse($request->date) : Carbon::today();
+    {
+        $date = $request->filled('date') ? Carbon::parse($request->date) : Carbon::today();
 
-    $attendances = Attendance::with('employee')
-        ->whereDate('date', $date->toDateString())
-        ->orderBy('check_in_at')
-        ->get();
+        $attendances = Attendance::with('employee')
+            ->whereDate('date', $date->toDateString())
+            ->orderBy('check_in_at')
+            ->get();
 
-    $totalEmployees = Employee::where('status', 'Aktif')->count();
-    $present = $attendances->whereNotNull('check_in_at')->count();
+        $totalEmployees = Employee::where('status', 'Aktif')->count();
+        $present = $attendances->whereNotNull('check_in_at')->count();
 
-    $summary = [
-        'present' => $present,
-        'absent'  => max($totalEmployees - $present, 0),
-        'outside' => $attendances->where('location_status', 'Luar Radius')->count(),
-    ];
+        $summary = [
+            'present' => $present,
+            'absent'  => max($totalEmployees - $present, 0),
+            'outside' => $attendances->where('location_status', 'Luar Radius')->count(),
+        ];
 
-    return view('owner.attendances.recap', compact('date', 'attendances', 'summary'));
-}
+        return view('owner.attendances.recap', compact('date', 'attendances', 'summary'));
+    }
 }

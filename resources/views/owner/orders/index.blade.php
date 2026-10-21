@@ -57,34 +57,87 @@
         </table>
     </div>
 
+    <!-- MODAL FORM PESANAN -->
     <div x-show="showForm" style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
         <div @click.away="showForm=false" class="w-full max-w-xl rounded-xl bg-white shadow-xl">
-            <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4"><h3 class="text-sm font-bold text-[#0f2137]" x-text="editing ? 'Ubah Pesanan' : 'Tambah Pesanan Baru'"></h3><button @click="showForm=false" class="text-gray-400">✕</button></div>
-            <form :action="formAction" method="POST" class="space-y-4 p-5">
-                @csrf <template x-if="editing">@method('PUT')</template>
+            <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                <h3 class="text-sm font-bold text-[#0f2137]" x-text="editing ? 'Ubah Pesanan' : 'Tambah Pesanan Baru'"></h3>
+                <button @click="showForm=false" class="text-gray-400">✕</button>
+            </div>
+            
+            <form :action="formAction" method="POST" class="space-y-4 p-5 max-h-[80vh] overflow-y-auto">
+                @csrf 
+                <template x-if="editing">@method('PUT')</template>
+                
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <label class="text-[10px] font-semibold text-gray-600">NAMA PELANGGAN *<input name="customer_name" x-model="form.customer_name" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs"></label>
-                    <label class="text-[10px] font-semibold text-gray-600">NO. HP *<input name="customer_phone" x-model="form.customer_phone" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs"></label>
-                    <label class="text-[10px] font-semibold text-gray-600">JUMLAH (PCS) *<input name="variants[0][quantity]" type="number" min="1" x-model="form.quantity" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs"></label>
-                    <label class="text-[10px] font-semibold text-gray-600">VARIAN RASA
-                        <select name="variants[0][id]" x-model="form.variant_id" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs"><option value="">Pilih varian</option>@foreach($variants as $variant)<option value="{{ $variant->id }}">{{ $variant->name }} - Rp {{ number_format($variant->price, 0, ',', '.') }}</option>@endforeach</select>
+                    <label class="text-[10px] font-semibold text-gray-600">NAMA PELANGGAN *
+                        <input name="customer_name" x-model="form.customer_name" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs">
                     </label>
-                    <input type="hidden" name="variants[0][price]" :value="selectedPrice">
-                    <label class="text-[10px] font-semibold text-gray-600">TANGGAL &amp; JAM AMBIL *<input name="pickup_at" type="datetime-local" x-model="form.pickup_at" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs"></label>
-                    <label class="text-[10px] font-semibold text-gray-600">STATUS<select name="status" x-model="form.status" class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs"><option value="pending">Menunggu Produksi</option><option value="process">Sedang Diproses</option><option value="completed">Selesai</option><option value="cancelled">Batal</option></select></label>
+                    <label class="text-[10px] font-semibold text-gray-600">NO. HP *
+                        <input name="customer_phone" x-model="form.customer_phone" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs">
+                    </label>
+                    
+                    <label class="text-[10px] font-semibold text-gray-600">TANGGAL &amp; JAM AMBIL *
+                        <input name="pickup_at" type="datetime-local" x-model="form.pickup_at" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs">
+                    </label>
+                    <label class="text-[10px] font-semibold text-gray-600">STATUS
+                        <select name="status" x-model="form.status" class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs">
+                            <option value="pending">Menunggu Produksi</option>
+                            <option value="process">Sedang Diproses</option>
+                            <option value="completed">Selesai</option>
+                            <option value="cancelled">Batal</option>
+                        </select>
+                    </label>
+
+                    <!-- BAGIAN INPUT VARIAN DINAMIS -->
+                    <div class="col-span-1 sm:col-span-2 rounded-lg border border-gray-100 p-3 bg-gray-50">
+                        <label class="mb-2 block text-[10px] font-semibold text-gray-600">PRODUK YANG DIPESAN *</label>
+                        
+                        <template x-for="(item, index) in form.variants" :key="index">
+                            <div class="mb-2 flex items-center gap-2">
+                                <div class="flex-1">
+                                    <select :name="'variants[' + index + '][id]'" x-model="item.variant_id" @change="updatePrice(index)" required class="w-full rounded-md border border-gray-200 px-3 py-2 text-xs">
+                                        <option value="">Pilih varian</option>
+                                        @foreach($variants as $variant)
+                                            <option value="{{ $variant->id }}">{{ $variant->name }} - Rp {{ number_format($variant->price, 0, ',', '.') }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="w-24">
+                                    <input :name="'variants[' + index + '][quantity]'" type="number" min="1" x-model="item.quantity" required class="w-full rounded-md border border-gray-200 px-3 py-2 text-xs" placeholder="Qty">
+                                </div>
+                                <input type="hidden" :name="'variants[' + index + '][price]'" :value="item.price">
+                                <div>
+                                    <button type="button" @click="removeVariant(index)" x-show="form.variants.length > 1" class="rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-500 hover:bg-red-100">✕</button>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <button type="button" @click="addVariant()" class="mt-1 rounded border border-gray-300 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-100">＋ Tambah Varian</button>
+                    </div>
                 </div>
-                <label class="block text-[10px] font-semibold text-gray-600">NOTE / CATATAN<textarea name="notes" x-model="form.notes" rows="2" class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs" placeholder="Catatan tambahan (opsional)"></textarea></label>
-                <div class="flex gap-2 border-t border-gray-100 pt-4"><button class="rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white" x-text="editing ? 'Simpan Perubahan' : 'Simpan Pesanan'"></button><button type="button" @click="showForm=false" class="rounded-md border border-gray-200 px-4 py-2 text-xs text-gray-600">Batal</button></div>
+                
+                <label class="block text-[10px] font-semibold text-gray-600">NOTE / CATATAN
+                    <textarea name="notes" x-model="form.notes" rows="2" class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs" placeholder="Catatan tambahan (opsional)"></textarea>
+                </label>
+                
+                <div class="flex gap-2 border-t border-gray-100 pt-4">
+                    <button class="rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white" x-text="editing ? 'Simpan Perubahan' : 'Simpan Pesanan'"></button>
+                    <button type="button" @click="showForm=false" class="rounded-md border border-gray-200 px-4 py-2 text-xs text-gray-600">Batal</button>
+                </div>
             </form>
         </div>
     </div>
 
+    <!-- MODAL WHATSAPP PARSER -->
     <div x-show="showWa" style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
         <div class="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl"><div class="flex justify-between"><h3 class="text-sm font-bold text-[#0f2137]">Parsing dari WhatsApp</h3><button @click="showWa=false" class="text-gray-400">✕</button></div><p class="mt-3 text-[10px] text-gray-500">Tempel teks chat sesuai format template untuk diisi otomatis.</p><form action="{{ route('owner.orders.parse_wa') }}" method="POST" class="mt-3">@csrf<textarea name="raw_template" required rows="8" class="w-full rounded-md border border-gray-200 p-3 text-xs" placeholder="Nama: Ibu Sari&#10;HP: 08123456789&#10;Waktu Ambil: 2026-07-01 14:00&#10;Catatan: Tolong dibungkus rapi"></textarea><div class="mt-3 flex gap-2"><button class="rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white">Isi Otomatis &amp; Lanjut ke Form</button><button type="button" @click="showWa=false" class="rounded-md border border-gray-200 px-4 py-2 text-xs">Batal</button></div></form></div>
     </div>
 
+    <!-- MODAL HAPUS -->
     <div x-show="showDelete" style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4"><div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl"><h3 class="text-sm font-bold text-[#0f2137]">Hapus Pesanan?</h3><p class="mt-3 text-xs text-gray-500">Yakin ingin menghapus <strong x-text="deleteName"></strong>? Tindakan ini tidak bisa dibatalkan.</p><form :action="deleteAction" method="POST" class="mt-5 flex gap-2">@csrf @method('DELETE')<button class="flex-1 rounded-md bg-red-600 px-4 py-2 text-xs font-semibold text-white">Ya, Hapus</button><button type="button" @click="showDelete=false" class="flex-1 rounded-md border border-gray-200 px-4 py-2 text-xs">Batal</button></form></div></div>
 
+    <!-- MODAL LABEL -->
     <div x-cloak x-show="showLabel" @keydown.escape.window="showLabel=false" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
         <div @click.away="showLabel=false" class="w-full max-w-sm rounded-xl bg-white p-3 shadow-xl">
             <div class="flex items-center justify-between px-2 pb-2"><h3 class="text-sm font-bold text-[#0f2137]">Label Pesanan</h3><button type="button" @click="showLabel=false" class="text-gray-400">✕</button></div>
@@ -109,17 +162,62 @@
 <script>
 function orderManager() {
     const variants = @json($variants->keyBy('id'));
-    const empty = { customer_name: '', customer_phone: '', quantity: 1, variant_id: '', pickup_at: '', status: 'pending', notes: '' };
+    // Struktur array untuk mendukung banyak varian
+    const empty = { 
+        customer_name: '', customer_phone: '', pickup_at: '', 
+        status: 'pending', notes: '', 
+        variants: [{ variant_id: '', quantity: 1, price: 0 }] 
+    };
+    
     return {
-        showForm: false, showWa: false, showDelete: false, showLabel: false, editing: false, formAction: '{{ route('owner.orders.store') }}', deleteAction: '', deleteName: '', labelOrder: { details: [] }, labelUrl: '', form: {...empty},
-        get selectedPrice() { return (variants[this.form.variant_id] || {}).price || 0; },
-        openCreate() { this.editing = false; this.form = {...empty}; this.formAction = '{{ route('owner.orders.store') }}'; this.showForm = true; },
-        openEdit(order) { const d = order.details[0] || {}; this.editing = true; this.form = { customer_name: order.customer_name, customer_phone: order.customer_phone, quantity: d.quantity || 1, variant_id: d.product_variant_id || '', pickup_at: order.pickup_at.replace(' ', 'T').slice(0, 16), status: order.status, notes: order.notes || '' }; this.formAction = '{{ url('/owner/orders') }}/' + order.id; this.showForm = true; },
+        showForm: false, showWa: false, showDelete: false, showLabel: false, editing: false, 
+        formAction: '{{ route('owner.orders.store') }}', deleteAction: '', deleteName: '', 
+        labelOrder: { details: [] }, labelUrl: '', 
+        // Lakukan deep copy agar data reset dengan benar
+        form: JSON.parse(JSON.stringify(empty)),
+
+        addVariant() {
+            this.form.variants.push({ variant_id: '', quantity: 1, price: 0 });
+        },
+        removeVariant(index) {
+            if (this.form.variants.length > 1) {
+                this.form.variants.splice(index, 1);
+            }
+        },
+        updatePrice(index) {
+            let vid = this.form.variants[index].variant_id;
+            this.form.variants[index].price = (variants[vid] || {}).price || 0;
+        },
+
+        openCreate() { 
+            this.editing = false; 
+            this.form = JSON.parse(JSON.stringify(empty)); 
+            this.formAction = '{{ route('owner.orders.store') }}'; 
+            this.showForm = true; 
+        },
+        openEdit(order) { 
+            this.editing = true; 
+            // Load data dari order.details ke format state form.variants
+            let loadedVariants = order.details.map(d => ({
+                variant_id: d.product_variant_id,
+                quantity: d.quantity,
+                price: d.unit_price
+            }));
+            
+            this.form = { 
+                customer_name: order.customer_name, 
+                customer_phone: order.customer_phone, 
+                pickup_at: order.pickup_at.replace(' ', 'T').slice(0, 16), 
+                status: order.status, 
+                notes: order.notes || '',
+                variants: loadedVariants.length ? loadedVariants : [{ variant_id: '', quantity: 1, price: 0 }]
+            }; 
+            this.formAction = '{{ url('/owner/orders') }}/' + order.id; 
+            this.showForm = true; 
+        },
         openDelete(action, name) { this.deleteAction = action; this.deleteName = name; this.showDelete = true; },
         openLabel(order, url) { this.labelOrder = order; this.labelUrl = url; this.showLabel = true; },
-        printLabel() {
-            window.open(this.labelUrl, 'labelPrintPopup', 'width=520,height=720,resizable=yes,scrollbars=yes');
-        },
+        printLabel() { window.open(this.labelUrl, 'labelPrintPopup', 'width=520,height=720,resizable=yes,scrollbars=yes'); },
         formatPickup(value) { return new Date(value.replace(' ', 'T')).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
     }
 }

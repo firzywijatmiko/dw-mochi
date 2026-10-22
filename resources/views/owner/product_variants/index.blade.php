@@ -1,4 +1,4 @@
-<!-- resources/views/product_variants/index.blade.php -->
+<!-- resources/views/owner/product_variants/index.blade.php -->
 @extends('layouts.app')
 
 @section('header_title', 'Kelola Produk')
@@ -33,6 +33,7 @@
                 <tr>
                     <th class="px-6 py-4 border-b border-gray-100">Nama Produk</th>
                     <th class="px-6 py-4 border-b border-gray-100">Harga per Pcs</th>
+                    <th class="px-6 py-4 border-b border-gray-100">Status</th>
                     <th class="px-6 py-4 border-b border-gray-100">Aksi</th>
                 </tr>
             </thead>
@@ -41,6 +42,13 @@
                 <tr class="hover:bg-gray-50/50 transition">
                     <td class="px-6 py-4">{{ $variant->name }}</td>
                     <td class="px-6 py-4">Rp {{ number_format($variant->price, 0, ',', '.') }}</td>
+                    <td class="px-6 py-4">
+                        @if($variant->is_active)
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-bold">Aktif</span>
+                        @else
+                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded-md text-[10px] font-bold">Tidak Aktif</span>
+                        @endif
+                    </td>
                     <td class="px-6 py-4 flex items-center gap-2">
                         <!-- Tombol Ubah -->
                         <button @click="openEditModal({{ $variant }})" class="border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-[10px] hover:bg-gray-50 flex items-center gap-1 transition">
@@ -56,7 +64,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="3" class="px-6 py-8 text-center text-gray-400">Belum ada data produk.</td>
+                    <td colspan="4" class="px-6 py-8 text-center text-gray-400">Belum ada data produk.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -76,24 +84,32 @@
 
             <form :action="formAction" method="POST" class="p-6 space-y-4">
                 @csrf
-                <!-- Directive PUT hanya untuk mode edit -->
                 <template x-if="isEdit">
                     @method('PUT')
                 </template>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Nama Produk *</label>
-                        <input type="text" name="name" x-model="formData.name" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] focus:border-[#0f2137] outline-none" placeholder="Contoh: Mochi Daifuku Coklat">
+                        <input type="text" name="name" x-model="formData.name" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="Contoh: Mochi Daifuku Coklat">
                     </div>
+                    
                     <div>
                         <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Harga per Pcs (Rp) *</label>
-                        <input type="number" name="price" x-model="formData.price" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] focus:border-[#0f2137] outline-none" placeholder="0">
+                        <!-- Input text untuk tampilan (otomatis ada titiknya) -->
+                        <input type="text" x-model="formattedPrice" @input="formatPrice" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="1.000">
+                        <!-- Input hidden untuk mengirim data berupa angka murni (integer) ke backend -->
+                        <input type="hidden" name="price" x-model="formData.price">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Status</label>
+                        <select name="is_active" x-model="formData.is_active" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+                        </select>
                     </div>
                 </div>
-
-                <!-- Input tersembunyi untuk field boolean is_active, di set true sebagai default -->
-                <input type="hidden" name="is_active" value="1">
 
                 <div class="flex items-center gap-2 pt-4">
                     <button type="submit" class="bg-[#0f2137] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#183252] transition" x-text="isEdit ? 'Simpan Perubahan' : 'Simpan'"></button>
@@ -141,26 +157,38 @@
             deleteProductName: '',
             formData: {
                 name: '',
-                price: ''
+                price: '',
+                is_active: 1
             },
+            formattedPrice: '',
             
+            formatPrice(e) {
+                // Hapus semua karakter yang bukan angka
+                let rawValue = e.target.value.replace(/\D/g, "");
+                this.formData.price = rawValue; 
+                // Format angka menggunakan konfigurasi mata uang Indonesia (menambahkan pemisah titik)
+                this.formattedPrice = rawValue ? new Intl.NumberFormat('id-ID').format(rawValue) : '';
+            },
+
             openCreateModal() {
                 this.isEdit = false;
-                // PERBAIKAN: Penambahan prefix owner. pada route
                 this.formAction = "{{ route('owner.product_variants.store') }}";
-                this.formData = { name: '', price: '' };
+                this.formData = { name: '', price: '', is_active: 1 };
+                this.formattedPrice = '';
                 this.isFormModalOpen = true;
             },
             
             openEditModal(variant) {
                 this.isEdit = true;
-                // PERBAIKAN: Penambahan prefix owner. pada route
                 let baseUrl = "{{ route('owner.product_variants.update', ':id') }}";
                 this.formAction = baseUrl.replace(':id', variant.id);
                 this.formData = { 
                     name: variant.name, 
-                    price: variant.price
+                    price: variant.price,
+                    is_active: variant.is_active
                 };
+                // Format langsung harga dari database ke tampilan UI
+                this.formattedPrice = new Intl.NumberFormat('id-ID').format(variant.price);
                 this.isFormModalOpen = true;
             },
             
@@ -169,7 +197,6 @@
             },
 
             openDeleteModal(id, name) {
-                // PERBAIKAN: Penambahan prefix owner. pada route
                 let baseUrl = "{{ route('owner.product_variants.destroy', ':id') }}";
                 this.deleteActionUrl = baseUrl.replace(':id', id);
                 this.deleteProductName = name;

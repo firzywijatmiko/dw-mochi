@@ -9,8 +9,9 @@ class OrderService
 {
     public function checkDuplicate($phone, $pickupAt, $ignoreOrderId = null)
     {
+        // Diubah dari whereDate menjadi where secara penuh (mencakup tanggal dan jam)
         $query = Order::where('customer_phone', $phone)
-                      ->whereDate('pickup_at', date('Y-m-d', strtotime($pickupAt)));
+                    ->where('pickup_at', $pickupAt);
         
         if ($ignoreOrderId) {
             $query->where('id', '!=', $ignoreOrderId);

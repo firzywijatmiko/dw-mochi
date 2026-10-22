@@ -125,15 +125,15 @@
                     <div class="col-span-3 sm:col-span-2 grid grid-cols-3 gap-2">
                         <div>
                             <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Gaji Harian (Rp)</label>
-                            <input type="number" name="base_daily_wage" x-model="formData.base_daily_wage" required class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-xs font-bold text-gray-800 outline-none" placeholder="0">
+                            <input type="number" name="base_daily_wage" x-model="formData.base_daily_wage" min="0" step="0.01" required class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-xs font-bold text-gray-800 outline-none" placeholder="0">
                         </div>
                         <div>
                             <label class="block text-[9px] font-semibold text-gray-600 uppercase mb-1">Tarif Lbr 1x / Jam</label>
-                            <input type="number" name="overtime_rate_1x" x-model="formData.overtime_rate_1x" class="w-full px-3 py-2 border border-blue-200 bg-blue-50/50 rounded-lg text-xs outline-none" placeholder="0">
+                            <input type="number" name="overtime_rate_1x" x-model="formData.overtime_rate_1x" min="0" step="0.01" class="w-full px-3 py-2 border border-blue-200 bg-blue-50/50 rounded-lg text-xs outline-none" placeholder="0">
                         </div>
                         <div>
                             <label class="block text-[9px] font-semibold text-gray-600 uppercase mb-1">Tarif Lbr 2x / Jam</label>
-                            <input type="number" name="overtime_rate_2x" x-model="formData.overtime_rate_2x" class="w-full px-3 py-2 border border-orange-200 bg-orange-50/50 rounded-lg text-xs outline-none" placeholder="0">
+                            <input type="number" name="overtime_rate_2x" x-model="formData.overtime_rate_2x" min="0" step="0.01" class="w-full px-3 py-2 border border-orange-200 bg-orange-50/50 rounded-lg text-xs outline-none" placeholder="0">
                         </div>
                     </div>
                 </div>

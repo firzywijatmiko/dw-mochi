@@ -5,100 +5,99 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Services\PayrollRecordService;
-use App\Services\PayrollService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class PayrollController extends Controller
 {
-    protected $payrollService;
     protected $recordService;
 
-    public function __construct(PayrollService $payrollService, PayrollRecordService $recordService)
+    public function __construct(PayrollRecordService $recordService)
     {
-        $this->payrollService = $payrollService;
-        $this->recordService  = $recordService;
+        $this->recordService = $recordService;
     }
 
     /**
-     * Halaman Penggajian (per periode) dan Riwayat Gaji (jika karyawan dipilih).
+     * Halaman Penggajian: daftar gaji per periode, filter bulan,
+     * dan riwayat gaji per karyawan (modal).
      */
     public function index(Request $request)
     {
-        $date = $request->filled('date') ? Carbon::parse($request->date) : Carbon::today();
-        [$start, $end] = $this->payrollService->weekRange($date);
+        // Data gaji selalu disinkronkan dari presensi (yang sudah Dibayar tidak diubah)
+        $this->recordService->syncFromAttendances();
 
-        $employeeId = $request->input('employee_id');
+        $all = Payroll::with('employee')
+            ->orderByDesc('period_start')
+            ->orderBy('employees_id')
+            ->get();
 
-        $query = Payroll::with('employee');
-
-        if ($employeeId) {
-            // Riwayat gaji satu karyawan: semua periode
-            $query->where('employees_id', $employeeId)->orderByDesc('period_start');
-        } else {
-            // Penggajian satu periode: semua karyawan
-            $query->where('period_start', $start->toDateString())
-                  ->where('period_end', $end->toDateString())
-                  ->orderBy('employees_id');
-        }
-
-        $payrolls   = $query->get();
-
-        // Bandingkan angka tersimpan dengan presensi terkini (deteksi presensi susulan)
-        $payrolls->each(function ($p) {
+        // Selisih angka tersimpan vs presensi terkini
+        $all->each(function ($p) {
             $p->current_total = $this->recordService->currentTotal($p);
             $p->difference    = round($p->current_total - $p->total_pay, 2);
         });
 
-        $employees  = Employee::orderBy('name')->get(['id', 'name']);
-        $totalUnpaid = $this->recordService->totalUnpaid();
+        // Filter bulan (format Y-m)
+        $month = $request->input('month');
+        $payrolls = $all;
+        if ($month && preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $payrolls = $all->filter(function ($p) use ($month) {
+                return $p->period_start->format('Y-m') === $month;
+            })->values();
+        } else {
+            $month = null;
+        }
+
+        $monthOptions = $all->map(function ($p) {
+            return $p->period_start->format('Y-m');
+        })->unique()->values()->mapWithKeys(function ($m) {
+            return [$m => Carbon::parse($m . '-01')->locale('id')->translatedFormat('F Y')];
+        });
+
+        // Data riwayat untuk modal per karyawan
+        $histories = $all->groupBy('employees_id')->map(function ($rows) {
+            return $rows->map(function ($p) {
+                return [
+                    'id'       => $p->id,
+                    'period'   => $p->period_label,
+                    'base'     => 'Rp ' . number_format($p->base_pay + $p->meal_pay, 0, ',', '.'),
+                    'overtime' => 'Rp ' . number_format($p->overtime_pay, 0, ',', '.'),
+                    'total'    => 'Rp ' . number_format($p->total_pay, 0, ',', '.'),
+                    'status'   => $p->status_label,
+                    'paid'     => $p->status === 'Dibayar',
+                ];
+            })->values();
+        });
+
+        $employees     = Employee::orderBy('name')->get(['id', 'name']);
+        $employeeNames = $employees->pluck('name', 'id');
+        $totalUnpaid   = $this->recordService->totalUnpaid();
 
         return view('owner.payrolls.index', compact(
-            'payrolls', 'employees', 'employeeId', 'date', 'start', 'end', 'totalUnpaid'
+            'payrolls', 'employees', 'employeeNames', 'histories', 'monthOptions', 'month', 'totalUnpaid'
         ));
     }
 
     /**
-     * Hitung/perbarui data gaji satu periode dari presensi.
+     * Ubah status gaji lewat dropdown (Belum Dibayar <-> Dibayar).
+     * Dari Dibayar ke Belum Dibayar = buka kunci, sehingga bisa dihitung ulang dari presensi.
      */
-    public function generate(Request $request)
+    public function updateStatus(Request $request, Payroll $payroll)
     {
-        $request->validate(['date' => 'required|date']);
+        $request->validate(['status' => 'required|in:Belum Dibayar,Dibayar']);
 
-        [$start, $end] = $this->payrollService->weekRange(Carbon::parse($request->date));
-        $result = $this->recordService->generate($start, $end);
-
-        $message = $result['updated'] . ' data gaji dihitung dari presensi.';
-        if ($result['skipped_paid'] > 0) {
-            $message .= ' ' . $result['skipped_paid'] . ' data berstatus Dibayar tidak diubah.';
+        if ($request->status === $payroll->status) {
+            return back();
         }
 
-        return redirect()
-            ->route('owner.payrolls.index', ['date' => $start->toDateString()])
-            ->with('success', $message);
-    }
-
-    /**
-     * Tandai gaji sudah dibayar.
-     */
-    public function markPaid(Payroll $payroll)
-    {
-        $this->recordService->markAsPaid($payroll);
-
-        return back()->with('success', 'Gaji ' . ($payroll->employee->name ?? '') . ' ditandai sudah dibayar.');
-    }
-
-    /**
-     * Buka kunci gaji yang sudah Dibayar agar bisa dihitung ulang.
-     */
-    public function unlock(Payroll $payroll)
-    {
-        if ($payroll->status !== 'Dibayar') {
-            return back()->withErrors(['payroll' => 'Gaji ini belum berstatus Dibayar.']);
+        if ($request->status === 'Dibayar') {
+            $this->recordService->markAsPaid($payroll);
+            $message = 'Gaji ' . ($payroll->employee->name ?? '') . ' ditandai sudah dibayar.';
+        } else {
+            $this->recordService->unlock($payroll);
+            $message = 'Status gaji ' . ($payroll->employee->name ?? '') . ' dikembalikan ke belum dibayar dan dihitung ulang dari presensi.';
         }
 
-        $this->recordService->unlock($payroll);
-
-        return back()->with('success', 'Kunci gaji ' . ($payroll->employee->name ?? '') . ' dibuka. Klik "Hitung Gaji" untuk memperbarui dari presensi.');
+        return back()->with('success', $message);
     }
 }

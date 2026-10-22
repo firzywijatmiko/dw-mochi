@@ -28,4 +28,24 @@ class Payroll extends Model
     {
         return $this->belongsTo(Employee::class, 'employees_id');
     }
+
+    /**
+     * Label periode ala prototype, misal "4-10 Mei 2026" atau "30 Jun-6 Jul 2026".
+     */
+    public function getPeriodLabelAttribute()
+    {
+        $s = $this->period_start->copy()->locale('id');
+        $e = $this->period_end->copy()->locale('id');
+
+        if ($s->month === $e->month && $s->year === $e->year) {
+            return $s->day . '-' . $e->day . ' ' . $e->translatedFormat('M Y');
+        }
+
+        return $s->day . ' ' . $s->translatedFormat('M') . '-' . $e->day . ' ' . $e->translatedFormat('M Y');
+    }
+
+    public function getStatusLabelAttribute()
+    {
+        return $this->status === 'Dibayar' ? 'Sudah Dibayar' : 'Belum Dibayar';
+    }
 }

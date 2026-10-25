@@ -75,6 +75,10 @@ class FinancialController extends Controller
             'amount'       => 'required|numeric|min:0',
             'expense_date' => 'required|date',
             'notes'        => 'nullable|string',
+        ], [
+            'amount.min'      => 'Nominal tidak boleh bernilai negatif.',
+            'amount.numeric'  => 'Nominal harus berupa angka.',
+            'amount.required' => 'Nominal wajib diisi.',
         ]);
 
         // Simpan data pengeluaran baru ke database
@@ -98,6 +102,10 @@ class FinancialController extends Controller
             'amount'       => 'required|numeric|min:0',
             'expense_date' => 'required|date',
             'notes'        => 'nullable|string',
+        ], [
+            'amount.min'      => 'Nominal tidak boleh bernilai negatif.',
+            'amount.numeric'  => 'Nominal harus berupa angka.',
+            'amount.required' => 'Nominal wajib diisi.',
         ]);
 
         // Update data pengeluaran

@@ -12,6 +12,11 @@
                 <span class="block sm:inline">{{ session('success') }}</span>
             </div>
         @endif
+        @if($errors->any())
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <span class="block sm:inline">{{ $errors->first() }}</span>
+            </div>
+        @endif
 
         <!-- Card Ringkasan (Otomatis dari Controller jika menggunakan variabel $totalIncome, $totalExpense, $netProfit) -->
         <div class="grid grid-cols-3 gap-6">
@@ -176,7 +181,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nominal (Rp) *</label>
-                        <input type="number" name="amount" required placeholder="0" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
+                        <input type="number" name="amount" required placeholder="0" min="0" onkeydown="if (['-', '+', 'e', 'E'].includes(event.key)) event.preventDefault();" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
                     </div>
                 </div>
 
@@ -216,10 +221,9 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nominal (Rp) *</label>
-                        <input type="number" name="amount" x-model="editAmount" required class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
+                        <input type="number" name="amount" x-model="editAmount" required min="0" onkeydown="if (['-', '+', 'e', 'E'].includes(event.key)) event.preventDefault();" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0a192f]">
                     </div>
                 </div>
-
                 <div class="grid grid-cols-2 gap-4 mb-6">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Tanggal *</label>

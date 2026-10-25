@@ -6,6 +6,10 @@
 @section('content')
 <div class="space-y-6">
 
+    @if($errors->any())
+        <div class="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ $errors->first() }}</div>
+    @endif
+
     <!-- Filter Periode + Unduh PDF -->
     <div class="flex flex-wrap items-end justify-between gap-3">
         <form method="GET" action="{{ route('owner.reports.weekly') }}" class="flex items-end gap-3">
@@ -20,12 +24,15 @@
             <button type="submit" class="bg-[#0f2137] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#183252] transition">Tampilkan</button>
         </form>
 
+        @if($reportData)
         <a href="{{ route('owner.reports.weekly', ['start_date' => $startDate, 'end_date' => $endDate, 'download' => 1]) }}"
            class="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-xs font-medium hover:bg-gray-50 transition">
             Unduh PDF
         </a>
+        @endif
     </div>
 
+    @if($reportData)
     <!-- Kartu Ringkasan -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -88,5 +95,6 @@
     </div>
 
     <p class="text-[10px] text-gray-400">Dibuat pada {{ $reportData['generated_at']->translatedFormat('d M Y H:i') }}</p>
+    @endif
 </div>
 @endsection

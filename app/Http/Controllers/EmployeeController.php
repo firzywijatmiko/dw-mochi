@@ -29,9 +29,9 @@ class EmployeeController extends Controller
             'username'         => 'required|string|max:255|unique:users,username',
             'phone'            => 'required|string|unique:users,phone',
             'password'         => 'required|string|min:6', 
-            'base_daily_wage'  => 'required|numeric',
-            'overtime_rate_1x' => 'nullable|numeric',
-            'overtime_rate_2x' => 'nullable|numeric', // <-- TAMBAHKAN INI
+            'base_daily_wage'  => 'required|numeric|min:0',
+            'overtime_rate_1x' => 'nullable|numeric|min:0',
+            'overtime_rate_2x' => 'nullable|numeric|min:0',
             'status'           => 'required|in:Aktif,Nonaktif',
         ]);
 
@@ -46,9 +46,9 @@ class EmployeeController extends Controller
             'username'         => 'required|string|max:255|unique:users,username,' . $employee->users_id,
             'password'         => 'nullable|string|min:6', // Ubah jadi nullable agar tidak wajib isi saat update jika tidak mau ganti password
             'phone'            => 'required|string|unique:users,phone,' . $employee->users_id, 
-            'base_daily_wage'  => 'required|numeric',
-            'overtime_rate_1x' => 'nullable|numeric',
-            'overtime_rate_2x' => 'nullable|numeric', // <-- TAMBAHKAN INI
+            'base_daily_wage'  => 'required|numeric|min:0',
+            'overtime_rate_1x' => 'nullable|numeric|min:0',
+            'overtime_rate_2x' => 'nullable|numeric|min:0',
             'status'           => 'required|in:Aktif,Nonaktif',
         ]);
 

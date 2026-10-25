@@ -35,22 +35,22 @@ class OrderController extends Controller
         return view('owner.orders.index', compact('orders', 'variants', 'status'));
     }
 
-    // --- ACTIVITY DIAGRAM: TAMBAH PESANAN ---
     public function store(Request $request)
     {
         $request->validate([
             'customer_name'  => 'required|string',
-            'customer_phone' => 'required|string',
+            'customer_phone' => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
             'pickup_at'      => 'required|date',
             'variants'       => 'required|array|min:1',
             'variants.*.id' => 'required|exists:product_variants,id',
             'variants.*.quantity' => 'required|integer|min:1',
             'variants.*.price' => 'required|numeric|min:0',
+        ], [
+            'customer_phone.regex' => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.'
         ]);
 
-        // Cek Duplikasi
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at)) {
-            return back()->with('error', 'Data Pesanan Sudah Ada pada tanggal tersebut.')->withInput();
+            return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal dan jam ambil yang persis sama.')->withInput();
         }
 
         $this->orderService->storeOrder($request->all(), $request->variants, Auth::id());
@@ -58,21 +58,22 @@ class OrderController extends Controller
         return redirect()->route('owner.orders.index')->with('success', 'Pesanan Berhasil Ditambahkan');
     }
 
-    // --- ACTIVITY DIAGRAM: UBAH PESANAN ---
     public function update(Request $request, Order $order)
     {
         $request->validate([
             'customer_name'  => 'required|string',
-            'customer_phone' => 'required|string',
+            'customer_phone' => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
             'pickup_at'      => 'required|date',
             'variants'       => 'required|array|min:1',
             'variants.*.id' => 'required|exists:product_variants,id',
             'variants.*.quantity' => 'required|integer|min:1',
             'variants.*.price' => 'required|numeric|min:0',
+        ], [
+            'customer_phone.regex' => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.'
         ]);
 
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at, $order->id)) {
-            return back()->with('error', 'Data Pesanan Sudah Ada.')->withInput();
+            return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal dan jam ambil yang persis sama.')->withInput();
         }
 
         $order->update($request->only(['customer_name', 'customer_phone', 'pickup_at', 'status', 'notes']));
@@ -88,14 +89,12 @@ class OrderController extends Controller
         return redirect()->route('owner.orders.index')->with('success', 'Pesanan Berhasil Diubah');
     }
 
-    // --- ACTIVITY DIAGRAM: HAPUS PESANAN ---
     public function destroy(Order $order)
     {
         $order->delete();
         return redirect()->route('owner.orders.index')->with('success', 'Data Pesanan Berhasil Dihapus');
     }
 
-    // --- ACTIVITY DIAGRAM: PARSING DATA WHATSAPP ---
     public function parseWhatsApp(Request $request)
     {
         $request->validate(['raw_template' => 'required|string']);
@@ -106,20 +105,35 @@ class OrderController extends Controller
             return back()->with('error', 'Format Pesan Tidak Sesuai');
         }
 
-        // Lempar data hasil parsing ke halaman form agar Owner bisa mereview (Preview Data)
         $variants = ProductVariant::where('is_active', true)->orderBy('name')->get();
         return view('owner.orders.create_preview', compact('parsedData', 'variants'));
     }
 
-    // --- ACTIVITY DIAGRAM: GENERATE LABEL PESANAN ---
     public function printLabel(Order $order)
     {
         $order->load('details.productVariant');
         
-        // Generate PDF menggunakan DomPDF
         $pdf = Pdf::loadView('owner.orders.label_pdf', compact('order'))
-                  ->setPaper('a6', 'portrait');
+                 ->setPaper('a6', 'portrait');
 
         return $pdf->stream('Label_Pesanan_'.$order->customer_name.'.pdf');
+    }
+
+    public function printSelectedLabels(Request $request)
+    {
+        $orderIds = $request->input('order_ids', []);
+
+        if (empty($orderIds)) {
+            return back()->with('error', 'Pilih minimal satu pesanan yang ingin dicetak labelnya.');
+        }
+
+        $orders = Order::with('details.productVariant')
+            ->whereIn('id', $orderIds)
+            ->get();
+
+        $pdf = Pdf::loadView('owner.orders.labels_bulk_pdf', compact('orders'))
+                 ->setPaper('a4', 'portrait');
+
+        return $pdf->stream('Label_Pesanan_Terpilih.pdf');
     }
 }

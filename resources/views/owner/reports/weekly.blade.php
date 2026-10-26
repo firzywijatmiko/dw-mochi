@@ -25,7 +25,7 @@
         </form>
 
         @if($reportData)
-        <a href="{{ route('owner.reports.weekly', ['start_date' => $startDate, 'end_date' => $endDate, 'download' => 1]) }}"
+        <a href="{{ route('owner.reports.weekly', ['start_date' => $reportData['week_start'], 'end_date' => $reportData['week_end'], 'download' => 1]) }}"
            class="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-xs font-medium hover:bg-gray-50 transition">
             Unduh PDF
         </a>

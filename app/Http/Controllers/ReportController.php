@@ -20,11 +20,7 @@ class ReportController extends Controller
     // --- ACTIVITY DIAGRAM: LIHAT LAPORAN OPERASIONAL ---
     public function weeklyReport(Request $request)
     {   
-        // Kolom tanggal yang dikosongkan memakai default minggu berjalan
-        $request->merge([
-            'start_date' => $request->filled('start_date') ? $request->input('start_date') : Carbon::now()->startOfWeek()->toDateString(),
-            'end_date'   => $request->filled('end_date')   ? $request->input('end_date')   : Carbon::now()->endOfWeek()->toDateString(),
-        ]);
+
         $rules = ['start_date' => 'nullable|date', 'end_date' => 'nullable|date'];
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $rules['end_date'] .= '|after_or_equal:start_date';

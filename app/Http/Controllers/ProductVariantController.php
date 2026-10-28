@@ -59,10 +59,16 @@ class ProductVariantController extends Controller
      */
     public function destroy(ProductVariant $productVariant)
     {
+        // Varian yang sudah dipakai pada pesanan tidak boleh dihapus
+        if (\App\Models\OrderDetail::where('product_variant_id', $productVariant->id)->exists()) {
+            return redirect()->route('owner.product_variants.index')
+                ->withErrors(['variant' => 'Varian "' . $productVariant->name . '" tidak bisa dihapus karena sudah dipakai pada pesanan.']);
+        }
+
         // Memanggil service untuk menghapus data
         $this->variantService->deleteVariant($productVariant);
 
         return redirect()->route('owner.product_variants.index')
-                         ->with('success', 'Variant produk berhasil dihapus.');
+            ->with('success', 'Varian produk berhasil dihapus.');
     }
 }

@@ -4,69 +4,63 @@
 @section('header_title', 'Manajemen Karyawan')
 
 @section('content')
-<div x-data="employeeManager()">
+<style>[x-cloak] { display: none !important; }</style>
+<div x-data="employeeManager()" class="space-y-4">
     
-    <!-- Notifikasi Flash Message -->
     @if(session('success'))
-        <div class="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-4">
-            {{ session('success') }}
-        </div>
+        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">{{ session('success') }}</div>
     @endif
     @if($errors->any())
-        <div class="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-            {{ $errors->first() }}
-        </div>
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{{ $errors->first() }}</div>
     @endif
 
-    <!-- Tombol Tambah Karyawan -->
-    <div class="flex justify-end mb-4">
-        <button @click="openCreateModal()" class="bg-[#0f2137] text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-[#183252] flex items-center gap-1.5 transition">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            Tambah Karyawan
+    <div class="flex justify-end">
+        <button @click="openCreateModal()" class="inline-flex items-center gap-1.5 rounded-md bg-[#0f2137] px-3 py-2 text-[10px] font-semibold text-white hover:bg-[#183252]">
+            <span>＋</span> Tambah Karyawan
         </button>
     </div>
 
     <!-- Tabel Data Karyawan -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table class="w-full text-left text-xs">
-            <thead class="bg-gray-50 text-gray-500 uppercase font-semibold text-[10px]">
+    <div class="overflow-x-auto rounded-lg border border-[#e7e0d8] bg-white shadow-sm">
+        <table class="min-w-[750px] w-full text-left text-[10px]">
+            <thead class="bg-[#faf9f7] uppercase text-[9px] tracking-wide text-gray-400">
                 <tr>
-                    <th class="px-6 py-4 border-b border-gray-100">Nama</th>
-                    <th class="px-6 py-4 border-b border-gray-100">Username Login</th>
-                    <th class="px-6 py-4 border-b border-gray-100">No. HP</th>
-                    <th class="px-6 py-4 border-b border-gray-100">Status</th>
-                    <th class="px-6 py-4 border-b border-gray-100">Gaji Pokok</th>
-                    <th class="px-6 py-4 border-b border-gray-100">Aksi</th>
+                    <th class="px-4 py-3">Nama</th>
+                    <th class="px-4 py-3">Username Login</th>
+                    <th class="px-4 py-3">No. HP</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Gaji Pokok</th>
+                    <th class="px-4 py-3">Aksi</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 text-gray-700 font-medium">
+            <tbody class="divide-y divide-[#f1eeeb] text-gray-600">
                 @forelse($employees as $emp)
-                <tr class="hover:bg-gray-50/50 transition">
-                    <td class="px-6 py-4">{{ $emp->name }}</td>
-                    <td class="px-6 py-4 text-blue-600 font-semibold">{{ $emp->user->username ?? '-' }}</td>
-                    <td class="px-6 py-4 text-gray-500">{{ $emp->user->phone ?? '-' }}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 text-[10px] rounded-full {{ $emp->status === 'Aktif' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-red-50 text-red-600 border border-red-100' }}">
+                <tr class="hover:bg-[#fcfbf9] transition">
+                    <td class="px-4 py-3 font-semibold text-[#0f2137]">{{ $emp->name }}</td>
+                    <td class="px-4 py-3">{{ $emp->user->username ?? '-' }}</td>
+                    <td class="px-4 py-3">{{ $emp->user->phone ?? '-' }}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex rounded-full px-2 py-1 text-[9px] font-semibold {{ $emp->status === 'Aktif' ? 'bg-[#dff5e9] text-[#348b66]' : 'bg-[#fee8e7] text-[#bd4d48]' }}">
                             {{ $emp->status }}
                         </span>
                     </td>
-                    <td class="px-6 py-4">Rp {{ number_format($emp->base_daily_wage, 0, ',', '.') }}</td>
-                    <td class="px-6 py-4 flex items-center gap-2">
-                        <!-- Tombol Ubah -->
-                        <button @click="openEditModal({{ $emp }})" class="border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-[10px] hover:bg-gray-50 flex items-center gap-1 transition">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                            Ubah
-                        </button>
-                        <!-- Tombol Hapus -->
-                        <button @click="openDeleteModal({{ $emp->id }}, '{{ addslashes($emp->name) }}')" class="border border-red-100 text-red-500 bg-red-50 px-3 py-1.5 rounded-lg text-[10px] hover:bg-red-100 flex items-center gap-1 transition">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            Hapus
-                        </button>
+                    <td class="px-4 py-3 font-semibold">Rp {{ number_format($emp->base_daily_wage, 0, ',', '.') }}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex gap-2">
+                            <!-- Tombol Ubah -->
+                            <button @click="openEditModal({{ $emp }})" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50">
+                                <span>✎</span> Ubah
+                            </button>
+                            <!-- Tombol Hapus -->
+                            <button @click="openDeleteModal({{ $emp->id }}, '{{ addslashes($emp->name) }}')" class="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold text-red-500 hover:bg-red-100">
+                                <span>🗑</span> Hapus
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-gray-400">Belum ada data karyawan.</td>
+                    <td colspan="6" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data karyawan.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -74,151 +68,110 @@
     </div>
 
     <!-- MODAL FORM (TAMBAH / UBAH) -->
-    <div x-show="isFormModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div @click.away="closeFormModal()" class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden" x-transition>
+    <div x-cloak x-show="isFormModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
+        <div @click.away="closeFormModal()" class="w-full max-w-xl rounded-xl bg-white shadow-xl" x-transition>
             
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 class="font-bold text-gray-800" x-text="isEdit ? 'Ubah Data Karyawan' : 'Tambah Karyawan Baru'"></h3>
-                <button type="button" @click="closeFormModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+            <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                <h3 class="text-sm font-bold text-[#0f2137]" x-text="isEdit ? 'Ubah Data Karyawan' : 'Tambah Karyawan Baru'"></h3>
+                <button type="button" @click="closeFormModal()" class="text-gray-400">✕</button>
             </div>
 
-            <form :action="formAction" method="POST" class="p-6 space-y-4">
+            <form :action="formAction" method="POST" class="space-y-4 p-5 max-h-[80vh] overflow-y-auto">
                 @csrf
                 <template x-if="isEdit">
                     <input type="hidden" name="_method" value="PUT">
                 </template>
 
                 <!-- Data Pribadi -->
-                <h4 class="text-xs font-bold text-gray-400 tracking-wider uppercase border-b pb-1 mb-2">Informasi Akun</h4>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Nama Karyawan *</label>
-                        <input type="text" name="name" x-model="formData.name" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="Nama lengkap">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">No. HP *</label>
-                        <input type="text" name="phone" x-model="formData.phone" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="08xxxxxxxxxx">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Username Login *</label>
-                        <input type="text" name="username" x-model="formData.username" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" placeholder="Contoh: karyawan01">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Password <span x-show="!isEdit">*</span></label>
-                        <input type="password" name="password" :required="!isEdit" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none" :placeholder="isEdit ? 'Kosongkan jika tak ingin ganti' : 'Minimal 6 karakter'">
-                    </div>
+                <h4 class="text-[10px] font-bold text-gray-400 uppercase border-b border-gray-100 pb-1 mb-2">Informasi Akun</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="text-[10px] font-semibold text-gray-600">NAMA KARYAWAN *
+                        <input type="text" name="name" x-model="formData.name" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs" placeholder="Nama lengkap">
+                    </label>
+                    <label class="text-[10px] font-semibold text-gray-600">NO. HP *
+                        <input type="text" name="phone" x-model="formData.phone" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs" placeholder="08xxxxxxxxxx">
+                    </label>
+                    <label class="text-[10px] font-semibold text-gray-600">USERNAME LOGIN *
+                        <input type="text" name="username" x-model="formData.username" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs" placeholder="Contoh: karyawan01">
+                    </label>
+                    <label class="text-[10px] font-semibold text-gray-600">PASSWORD <span x-show="!isEdit">*</span>
+                        <input type="password" name="password" :required="!isEdit" class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs" :placeholder="isEdit ? 'Kosongkan jika tak ganti' : 'Minimal 6 karakter'">
+                    </label>
                 </div>
 
                 <!-- Data Gaji & Status -->
-                <h4 class="text-xs font-bold text-gray-400 tracking-wider uppercase border-b pb-1 mt-4 mb-2">Detail Gaji & Status</h4>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="col-span-3 sm:col-span-1">
-                        <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Status Pekerja</label>
-                        <select name="status" x-model="formData.status" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-[#0f2137] outline-none bg-white">
+                <h4 class="text-[10px] font-bold text-gray-400 uppercase border-b border-gray-100 pb-1 mt-4 mb-2">Detail Gaji & Status</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label class="text-[10px] font-semibold text-gray-600 sm:col-span-1">STATUS PEKERJA
+                        <select name="status" x-model="formData.status" required class="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-xs bg-white">
                             <option value="Aktif">Aktif</option>
                             <option value="Nonaktif">Nonaktif</option>
                         </select>
-                    </div>
+                    </label>
                     
-                    <div class="col-span-3 sm:col-span-2 grid grid-cols-3 gap-2">
-                        <div>
-                            <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Gaji Harian (Rp)</label>
-                            <input type="number" name="base_daily_wage" x-model="formData.base_daily_wage" min="0" step="0.01" required class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-xs font-bold text-gray-800 outline-none" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="block text-[9px] font-semibold text-gray-600 uppercase mb-1">Tarif Lbr 1x / Jam</label>
-                            <input type="number" name="overtime_rate_1x" x-model="formData.overtime_rate_1x" min="0" step="0.01" class="w-full px-3 py-2 border border-blue-200 bg-blue-50/50 rounded-lg text-xs outline-none" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="block text-[9px] font-semibold text-gray-600 uppercase mb-1">Tarif Lbr 2x / Jam</label>
-                            <input type="number" name="overtime_rate_2x" x-model="formData.overtime_rate_2x" min="0" step="0.01" class="w-full px-3 py-2 border border-orange-200 bg-orange-50/50 rounded-lg text-xs outline-none" placeholder="0">
-                        </div>
+                    <div class="sm:col-span-2 grid grid-cols-3 gap-2">
+                        <label class="text-[9px] font-semibold text-gray-600 uppercase">GAJI HARIAN (RP)
+                            <input type="number" name="base_daily_wage" x-model="formData.base_daily_wage" min="0" step="0.01" onkeydown="if(event.key === '-') event.preventDefault()" required class="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold" placeholder="0">
+                        </label>
+                        <label class="text-[9px] font-semibold text-gray-600 uppercase">LBR 1X / JAM
+                            <input type="number" name="overtime_rate_1x" x-model="formData.overtime_rate_1x" min="0" step="0.01" onkeydown="if(event.key === '-') event.preventDefault()" class="mt-1 w-full rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2 text-xs" placeholder="0">
+                        </label>
+                        <label class="text-[9px] font-semibold text-gray-600 uppercase">LBR 2X / JAM
+                            <input type="number" name="overtime_rate_2x" x-model="formData.overtime_rate_2x" min="0" step="0.01" onkeydown="if(event.key === '-') event.preventDefault()" class="mt-1 w-full rounded-md border border-orange-200 bg-orange-50/50 px-3 py-2 text-xs" placeholder="0">
+                        </label>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-2 pt-4 mt-2">
-                    <button type="button" @click="closeFormModal()" class="px-4 py-2 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">Batal</button>
-                    <button type="submit" class="bg-[#0f2137] text-white px-6 py-2 rounded-lg text-xs font-medium hover:bg-[#183252] transition" x-text="isEdit ? 'Simpan Perubahan' : 'Tambah Karyawan'"></button>
+                <div class="flex gap-2 border-t border-gray-100 pt-4 mt-2">
+                    <button type="submit" class="rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white" x-text="isEdit ? 'Simpan Perubahan' : 'Tambah Karyawan'"></button>
+                    <button type="button" @click="closeFormModal()" class="rounded-md border border-gray-200 px-4 py-2 text-xs text-gray-600">Batal</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- MODAL KONFIRMASI HAPUS -->
-    <div x-show="isDeleteModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div @click.away="isDeleteModalOpen = false" class="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden p-6" x-transition>
-            <div class="flex justify-between items-start mb-4">
-                <h3 class="font-bold text-gray-800">Hapus Karyawan?</h3>
-                <button @click="isDeleteModalOpen = false" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
+    <div x-cloak x-show="isDeleteModalOpen" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
+        <div @click.away="isDeleteModalOpen = false" class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl" x-transition>
+            <h3 class="text-sm font-bold text-[#0f2137]">Hapus Karyawan?</h3>
+            <p class="mt-3 text-xs text-gray-500">Yakin ingin menghapus <strong x-text="deleteEmployeeName"></strong>?</p>
             
-            <p class="text-xs text-gray-600 mb-6">Yakin ingin menghapus <strong x-text="deleteEmployeeName" class="text-gray-800"></strong>?</p>
-            
-            <form :action="deleteActionUrl" method="POST" class="flex items-center gap-2">
+            <form :action="deleteActionUrl" method="POST" class="mt-5 flex gap-2">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="w-1/2 bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-red-700 transition flex justify-center items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Ya, Hapus
-                </button>
-                <button type="button" @click="isDeleteModalOpen = false" class="w-1/2 px-4 py-2 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">Batal</button>
+                <button type="submit" class="flex-1 rounded-md bg-red-600 px-4 py-2 text-xs font-semibold text-white">Ya, Hapus</button>
+                <button type="button" @click="isDeleteModalOpen = false" class="flex-1 rounded-md border border-gray-200 px-4 py-2 text-xs">Batal</button>
             </form>
         </div>
     </div>
 </div>
 
-<!-- AlpineJS Script Logic -->
 <script>
     function employeeManager() {
         return {
-            isFormModalOpen: false,
-            isDeleteModalOpen: false,
-            isEdit: false,
-            formAction: '',
-            deleteActionUrl: '',
-            deleteEmployeeName: '',
-            formData: {
-                name: '',
-                username: '',
-                phone: '',
-                status: 'Aktif',
-                base_daily_wage: '',
-                overtime_rate_1x: '',
-                overtime_rate_2x: ''
-            },
-            
+            isFormModalOpen: false, isDeleteModalOpen: false, isEdit: false,
+            formAction: '', deleteActionUrl: '', deleteEmployeeName: '',
+            formData: { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '', overtime_rate_1x: '', overtime_rate_2x: '' },
             openCreateModal() {
                 this.isEdit = false;
                 this.formAction = "{{ route('owner.employees.store') }}";
-                this.formData = { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '', overtime_rate_1x: '0', overtime_rate_2x: '0' };
+                this.formData = { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '', overtime_rate_1x: '', overtime_rate_2x: '' };
                 this.isFormModalOpen = true;
             },
-            
             openEditModal(employee) {
                 this.isEdit = true;
                 let baseUrl = "{{ route('owner.employees.update', ':id') }}";
                 this.formAction = baseUrl.replace(':id', employee.id);
-                
                 this.formData = { 
-                    name: employee.name, 
-                    username: employee.user ? employee.user.username : '',
-                    phone: employee.user ? employee.user.phone : '', 
-                    status: employee.status, 
+                    name: employee.name, username: employee.user ? employee.user.username : '',
+                    phone: employee.user ? employee.user.phone : '', status: employee.status, 
                     base_daily_wage: employee.base_daily_wage,
-                    overtime_rate_1x: employee.overtime_rate_1x || 0,
-                    overtime_rate_2x: employee.overtime_rate_2x || 0
+                    overtime_rate_1x: (employee.overtime_rate_1x == 0 || !employee.overtime_rate_1x) ? '' : employee.overtime_rate_1x,
+                    overtime_rate_2x: (employee.overtime_rate_2x == 0 || !employee.overtime_rate_2x) ? '' : employee.overtime_rate_2x
                 };
                 this.isFormModalOpen = true;
             },
-            
-            closeFormModal() {
-                this.isFormModalOpen = false;
-            },
-            
+            closeFormModal() { this.isFormModalOpen = false; },
             openDeleteModal(id, name) {
                 let baseUrl = "{{ route('owner.employees.destroy', ':id') }}";
                 this.deleteActionUrl = baseUrl.replace(':id', id);

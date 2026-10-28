@@ -15,7 +15,7 @@ use App\Http\Controllers\ProductVariantController;
 Route::get('/', function () {
     if (\Illuminate\Support\Facades\Auth::check()) {
         return \Illuminate\Support\Facades\Auth::user()->role === 'Karyawan'
-            ? redirect()->route('karyawan.dashboard')
+            ? redirect()->route('employee.dashboard') // Ubah karyawan.dashboard menjadi employee.dashboard
             : redirect()->route('owner.dashboard');
     }
 

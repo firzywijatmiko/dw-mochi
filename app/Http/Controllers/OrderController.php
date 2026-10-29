@@ -50,7 +50,7 @@ class OrderController extends Controller
         ]);
 
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at)) {
-            return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal dan jam ambil yang persis sama.')->withInput();
+            return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal ambil yang sama.')->withInput();
         }
 
         $this->orderService->storeOrder($request->all(), $request->variants, Auth::id());
@@ -73,7 +73,7 @@ class OrderController extends Controller
         ]);
 
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at, $order->id)) {
-            return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal dan jam ambil yang persis sama.')->withInput();
+            return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal ambil yang sama.')->withInput();
         }
 
         $order->update($request->only(['customer_name', 'customer_phone', 'pickup_at', 'status', 'notes']));

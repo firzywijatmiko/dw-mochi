@@ -3,15 +3,17 @@
 namespace App\Services;
 
 use App\Models\Order;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
     public function checkDuplicate($phone, $pickupAt, $ignoreOrderId = null)
     {
-        // Diubah dari whereDate menjadi where secara penuh (mencakup tanggal dan jam)
+        $pickupDate = Carbon::parse($pickupAt)->toDateString();
+
         $query = Order::where('customer_phone', $phone)
-                    ->where('pickup_at', $pickupAt);
+                    ->whereDate('pickup_at', $pickupDate);
         
         if ($ignoreOrderId) {
             $query->where('id', '!=', $ignoreOrderId);

@@ -76,11 +76,6 @@
             </div>
         </form>
 
-        <!-- Footer Demo -->
-        <div class="mt-5 text-center">
-            <p class="text-[9px] text-gray-400">Demo: <span class="text-[#c28455]">admin / mochi123</span></p>
-        </div>
-        
     </div>
 
 </body>

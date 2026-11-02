@@ -65,7 +65,7 @@ class FinancialController extends Controller
             $chartMax = ceil($highest / $unit) * $unit;
         }
 
-        return view('financial.index', compact('expenses', 'totalIncome', 'totalExpense', 'netProfit', 'chartData', 'chartMax'));
+        return view('owner.financial.index', compact('expenses', 'totalIncome', 'totalExpense', 'netProfit', 'chartData', 'chartMax'));
     }
 
     public function store(Request $request)

@@ -15,8 +15,6 @@ class LocationValidationService
 
     public function isWithinRadius($lat, $lng)
     {
-        // TIP: Jika ingin 100% langsung tembus tanpa validasi GPS dulu selama testing, 
-        // kamu bisa aktifkan baris ini: return true;
 
         $distance = $this->calculateHaversineDistance($lat, $lng, $this->officeLat, $this->officeLng);
         return $distance <= $this->maxRadius;

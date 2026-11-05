@@ -39,6 +39,7 @@
                     <th class="px-4 py-3">Nama Karyawan</th>
                     <th class="px-4 py-3">Jam Masuk</th>
                     <th class="px-4 py-3">Jam Pulang</th>
+                    <!-- <th class="px-4 py-3">Durasi Kerja</th> -->
                     <th class="px-4 py-3">Jam Lembur</th>
                     <th class="px-4 py-3">Status Lokasi</th>
                     <th class="px-4 py-3">Gaji Harian</th>
@@ -61,6 +62,7 @@
                     </td>
                     <td class="px-4 py-3">{{ optional($att->check_in_at)->format('H:i') ?? '-' }}</td>
                     <td class="px-4 py-3">{{ optional($att->check_out_at)->format('H:i') ?? '-' }}</td>
+                    <td class="px-4 py-3">{{ number_format($att->worked_hours ?? 0, 2, ',', '.') }} jam</td>
                     <td class="px-4 py-3 text-gray-500">
                         {{ $overtime > 0 ? rtrim(rtrim(number_format($overtime, 2, ',', '.'), '0'), ',') . ' jam' : '-' }}
                     </td>
@@ -83,7 +85,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data presensi pada tanggal ini.</td>
+                    <td colspan="7" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data presensi pada tanggal ini.</td>
                 </tr>
                 @endforelse
             </tbody>

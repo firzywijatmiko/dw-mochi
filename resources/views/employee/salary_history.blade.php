@@ -48,6 +48,10 @@
                         <svg class="w-4 h-4 mr-2 text-[#c28455]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                         Pulang: <span class="ml-1 font-semibold">{{ $att->check_out_at ? $att->check_out_at->format('H:i') : '-' }}</span>
                     </div>
+                    <div class="flex items-center bg-gray-50 border border-gray-100 rounded-lg p-2">
+                        <svg class="w-4 h-4 mr-2 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Durasi kerja: <span class="ml-1 font-semibold">{{ number_format($att->worked_hours ?? 0, 2, ',', '.') }} jam</span>
+                    </div>
                     @if($att->overtime_1x > 0 || $att->overtime_2x > 0)
                     <div class="flex items-center text-[#a17b1c] mt-1 font-semibold bg-[#fff6d8] p-2 rounded-lg border border-[#f5e3d3] w-max">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>

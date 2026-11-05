@@ -29,4 +29,13 @@ class Attendance extends Model
     {
         return $this->belongsTo(Employee::class, 'employees_id');
     }
+
+    public function getWorkedHoursAttribute(): float
+    {
+        if (!$this->check_in_at || !$this->check_out_at) {
+            return 0.0;
+        }
+
+        return round($this->check_in_at->diffInSeconds($this->check_out_at) / 3600, 2);
+    }
 }

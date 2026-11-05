@@ -76,7 +76,11 @@ class OrderController extends Controller
             return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal ambil yang sama.')->withInput();
         }
 
-        $order->update($request->only(['customer_name', 'customer_phone', 'pickup_at', 'status', 'notes']));
+        // RESET STATUS CETAK: Setiap kali pesanan diubah, kembalikan is_label_printed ke false
+        $updateData = $request->only(['customer_name', 'customer_phone', 'pickup_at', 'status', 'notes']);
+        $updateData['is_label_printed'] = false;
+
+        $order->update($updateData);
         $order->details()->delete();
         foreach ($request->input('variants') as $variant) {
             $order->details()->create([
@@ -99,20 +103,37 @@ class OrderController extends Controller
     {
         $request->validate(['raw_template' => 'required|string']);
 
-        $parsedData = $this->waParser->parse($request->raw_template);
+        $templateText = $request->input('raw_template');
+        $parsedData = $this->waParser->parse($templateText);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            if (!$parsedData['is_valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Format Pesan Tidak Sesuai'
+                ], 422); 
+            }
+            
+            return response()->json(['success' => true]);
+        }
 
         if (!$parsedData['is_valid']) {
             return back()->with('error', 'Format Pesan Tidak Sesuai');
         }
 
         $variants = ProductVariant::where('is_active', true)->orderBy('name')->get();
-        return view('owner.orders.create_preview', compact('parsedData', 'variants'));
+        $raw_template = $templateText; 
+
+        return view('owner.orders.create_preview', compact('parsedData', 'variants', 'raw_template'));
     }
 
     public function printLabel(Order $order)
     {
         $order->load('details.productVariant');
         
+        // TANDAI SUDAH DICETAK
+        $order->update(['is_label_printed' => true]);
+
         $pdf = Pdf::loadView('owner.orders.label_pdf', compact('order'))
                  ->setPaper('a6', 'portrait');
 
@@ -126,6 +147,9 @@ class OrderController extends Controller
         if (empty($orderIds)) {
             return back()->with('error', 'Pilih minimal satu pesanan yang ingin dicetak labelnya.');
         }
+
+        // TANDAI SEMUA PESANAN TERPILIH SEBAGAI SUDAH DICETAK
+        Order::whereIn('id', $orderIds)->update(['is_label_printed' => true]);
 
         $orders = Order::with('details.productVariant')
             ->whereIn('id', $orderIds)

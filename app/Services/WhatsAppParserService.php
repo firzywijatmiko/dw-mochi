@@ -9,8 +9,7 @@ class WhatsAppParserService
 {
     public function parse($rawTemplate)
     {
-        $text = $rawTemplate;
-        $lowerText = strtolower($text);
+        $text = trim($rawTemplate);
 
         $parsedData = [
             'customer_name' => '',
@@ -21,73 +20,83 @@ class WhatsAppParserService
             'is_valid' => true
         ];
 
-        // 1. Ekstrak No HP (Cari angka setelah variasi kata hp/wa tanpa mempedulikan awal baris)
-        if (preg_match('/(?:no\s*hp|hp|wa|whatsapp|telepon|telp)[\s:=\-]*((?:08|62|\+62)[\d\-\s]{8,13})/i', $text, $matches)) {
+        // 1. Ekstrak Nama (Wajib diawali baris "Nama: ")
+        if (preg_match('/^Nama\s*:\s*(.+)$/im', $text, $matches)) {
+            $parsedData['customer_name'] = trim($matches[1]);
+        } else {
+            $parsedData['is_valid'] = false;
+        }
+
+        // 2. Ekstrak No HP (Wajib diawali baris "No. HP: " atau "No HP: ")
+        if (preg_match('/^No\.?\s*HP\s*:\s*((?:08|62|\+62)[\d\-\s]{8,13})$/im', $text, $matches)) {
             $rawPhone = preg_replace('/[^0-9]/', '', $matches[1]);
             if (str_starts_with($rawPhone, '62')) {
                 $rawPhone = '0' . substr($rawPhone, 2);
             }
             $parsedData['customer_phone'] = $rawPhone;
+        } else {
+            $parsedData['is_valid'] = false;
         }
 
-        // 2. Ekstrak Waktu Ambil
-        if (preg_match('/(?:tgl|tanggal|waktu|jam|ambil)\s*[:=\-,\.]?\s*(\d{1,2}\s+[a-zA-Z]+\s+\d{4}.*?(?:pagi|siang|sore|malam|malem|am|pm|\b))/i', $text, $matches)) {
+        // 3. Ekstrak Tanggal (Wajib diawali baris "Tanggal & Waktu Ambil: ")
+        if (preg_match('/^Tanggal\s*(?:&|dan)\s*Waktu\s*Ambil\s*:\s*(.+)$/im', $text, $matches)) {
             $parsedData['pickup_at'] = $this->parseFuzzyDate($matches[1]);
+        } else {
+            $parsedData['is_valid'] = false;
         }
 
-        // 3. Ekstrak Nama Pelanggan 
-        if (preg_match('/(?:nama|atas nama|pemesan|name)\s*[:=\-]?\s*([a-zA-Z\s]+?)(?:no\s*hp|hp|wa|,|\n)/i', $text, $matches)) {
-            $parsedData['customer_name'] = trim($matches[1]);
-        } else if (preg_match('/^([a-zA-Z\s]+?)(?:no\s*hp|hp|wa|tgl|ambil|,|\n)/i', $text, $matches)) {
-            // Tangkap kata di paling awal kalimat jika user langsung mengetik nama (misal: "Basna no hp...")
-            $parsedData['customer_name'] = trim($matches[1]);
-        }
-
-        // 4. Ekstrak Varian (Cari nama rasa dan angka terdekatnya di seluruh teks)
-        $activeVariants = ProductVariant::where('is_active', true)->get();
-        $orderText = $text; 
-        
-        // Persempit pencarian angka hanya pada kalimat setelah kata order/pesan jika ada
-        if (preg_match('/(?:order|pesan|pesanan|mau)[\s:=\-]*(.*)/is', $text, $matches)) {
-            $orderText = $matches[1];
-        }
-
-        foreach ($activeVariants as $variant) {
-            $vName = strtolower($variant->name);
-            $keywords = explode(' ', str_replace('mochi ', '', $vName));
+        // 4. Ekstrak Pesanan (Wajib ada baris "Pesanan:" lalu diikuti list item dengan format "- Nama Rasa: Jumlah")
+        if (preg_match('/^Pesanan\s*:\s*\n(.*?)(?:^Catatan\s*:|\z)/ims', $text, $matches)) {
+            $orderBlock = $matches[1];
+            $activeVariants = ProductVariant::where('is_active', true)->get();
             
-            foreach ($keywords as $kw) {
-                if (trim($kw) === '') continue;
-                
-                // Cari nama rasa, kemudian tangkap angka yang muncul setelah nama tersebut
-                $pattern = '/' . preg_quote($kw, '/') . '[^\d]*?(\d+)/i';
-                if (preg_match($pattern, $orderText, $matches)) {
-                    $parsedData['variants'][] = [
-                        'id' => $variant->id,
-                        'name' => $variant->name,
-                        'quantity' => (int) $matches[1],
-                        'price' => $variant->price
-                    ];
-                    break;
-                } else if (str_contains(strtolower($orderText), $kw)) {
-                    // Ketemu nama varian tapi tidak ada angka, asumsikan 1
-                    $parsedData['variants'][] = [
-                        'id' => $variant->id,
-                        'name' => $variant->name,
-                        'quantity' => 1,
-                        'price' => $variant->price
-                    ];
-                    break;
+            // Tangkap list dengan format "- Coklat: 10"
+            preg_match_all('/^-\s*(.+?)\s*:\s*(\d+)/im', $orderBlock, $orderLines, PREG_SET_ORDER);
+            
+            if (count($orderLines) > 0) {
+                foreach ($orderLines as $line) {
+                    $vNameInput = strtolower(trim($line[1]));
+                    $qty = (int) $line[2];
+                    
+                    $matchedVariant = null;
+                    foreach ($activeVariants as $variant) {
+                        $dbName = strtolower($variant->name);
+                        $dbKeywords = explode(' ', str_replace('mochi ', '', $dbName));
+                        
+                        foreach ($dbKeywords as $kw) {
+                            if ($kw !== '' && str_contains($vNameInput, $kw)) {
+                                $matchedVariant = $variant;
+                                break;
+                            }
+                        }
+                        if ($matchedVariant) break;
+                    }
+                    
+                    if ($matchedVariant) {
+                        $parsedData['variants'][] = [
+                            'id' => $matchedVariant->id,
+                            'name' => $matchedVariant->name,
+                            'quantity' => $qty,
+                            'price' => $matchedVariant->price
+                        ];
+                    }
                 }
+            } else {
+                // Jika ada "Pesanan:" tapi format listnya salah (tidak pakai strip dan titik dua)
+                $parsedData['is_valid'] = false; 
             }
+        } else {
+            // Jika kata "Pesanan:" tidak ada
+            $parsedData['is_valid'] = false; 
         }
 
         if (empty($parsedData['variants'])) {
+            $parsedData['is_valid'] = false;
             $parsedData['variants'][] = ['id' => '', 'quantity' => 1, 'price' => 0];
         }
 
-        // 5. Ekstrak Catatan Tambahan
-        if (preg_match('/(?:catatan|note|keterangan)[\s:=\-]*(.*)$/is', $text, $matches)) {
+        // 5. Ekstrak Catatan (Opsional, tapi akan ditangkap jika diawali "Catatan: ")
+        if (preg_match('/^Catatan\s*:\s*(.*)$/im', $text, $matches)) {
             $parsedData['notes'] = trim($matches[1]);
         }
 
@@ -98,7 +107,6 @@ class WhatsAppParserService
     {
         $text = strtolower(trim($rawDate));
 
-        // Bersihkan kata obrolan yang ikut tertangkap agar tidak merusak format tanggal
         $text = preg_replace('/(ya|kaa|kak|sis|dong|nih).*$/i', '', $text);
         
         $replacements = [
@@ -114,7 +122,6 @@ class WhatsAppParserService
         $text = str_replace(',', ' ', $text);
         $text = trim(preg_replace('/\s+/', ' ', $text));
         
-        // Ubah jam acak seperti "12 am" menjadi "12:00 am"
         $text = preg_replace('/(\d{1,2})\s*(am|pm)/i', '$1:00 $2', $text);
 
         try {

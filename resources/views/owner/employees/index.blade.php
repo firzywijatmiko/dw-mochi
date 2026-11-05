@@ -110,14 +110,20 @@
                     </label>
                     
                     <div class="sm:col-span-2 grid grid-cols-3 gap-2">
+                        <!-- GAJI HARIAN -->
                         <label class="text-[9px] font-semibold text-gray-600 uppercase">GAJI HARIAN (RP)
-                            <input type="number" name="base_daily_wage" x-model="formData.base_daily_wage" min="0" step="0.01" onkeydown="if(event.key === '-') event.preventDefault()" required class="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold" placeholder="0">
+                            <input type="text" x-model="displayWage" @input="formatWage($event, 'base_daily_wage')" required class="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold" placeholder="0">
+                            <input type="hidden" name="base_daily_wage" x-model="formData.base_daily_wage">
                         </label>
+                        <!-- LEMBUR 1X -->
                         <label class="text-[9px] font-semibold text-gray-600 uppercase">LBR 1X / JAM
-                            <input type="number" name="overtime_rate_1x" x-model="formData.overtime_rate_1x" min="0" step="0.01" onkeydown="if(event.key === '-') event.preventDefault()" class="mt-1 w-full rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2 text-xs" placeholder="0">
+                            <input type="text" x-model="displayOt1" @input="formatWage($event, 'overtime_rate_1x')" class="mt-1 w-full rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2 text-xs" placeholder="0">
+                            <input type="hidden" name="overtime_rate_1x" x-model="formData.overtime_rate_1x">
                         </label>
+                        <!-- LEMBUR 2X -->
                         <label class="text-[9px] font-semibold text-gray-600 uppercase">LBR 2X / JAM
-                            <input type="number" name="overtime_rate_2x" x-model="formData.overtime_rate_2x" min="0" step="0.01" onkeydown="if(event.key === '-') event.preventDefault()" class="mt-1 w-full rounded-md border border-orange-200 bg-orange-50/50 px-3 py-2 text-xs" placeholder="0">
+                            <input type="text" x-model="displayOt2" @input="formatWage($event, 'overtime_rate_2x')" class="mt-1 w-full rounded-md border border-orange-200 bg-orange-50/50 px-3 py-2 text-xs" placeholder="0">
+                            <input type="hidden" name="overtime_rate_2x" x-model="formData.overtime_rate_2x">
                         </label>
                     </div>
                 </div>
@@ -151,27 +157,77 @@
         return {
             isFormModalOpen: false, isDeleteModalOpen: false, isEdit: false,
             formAction: '', deleteActionUrl: '', deleteEmployeeName: '',
+            
+            // Variabel tampungan angka murni untuk dikirim ke backend via hidden input
             formData: { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '', overtime_rate_1x: '', overtime_rate_2x: '' },
+            
+            // Variabel tampungan untuk teks visual yang ada titiknya di input
+            displayWage: '',
+            displayOt1: '',
+            displayOt2: '',
+
+            // Fungsi helper untuk memformat angka jadi ada titik ribuan
+            formatRupiah(value) {
+                if (!value && value !== 0) return '';
+                let numberString = value.toString().replace(/[^,\d]/g, '');
+                let split = numberString.split(',');
+                let sisa = split[0].length % 3;
+                let rupiah = split[0].substr(0, sisa);
+                let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+                if (ribuan) {
+                    let separator = sisa ? '.' : '';
+                    rupiah += separator + ribuan.join('.');
+                }
+                return split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+            },
+
+            // Handler ketika user mengetik di input gaji/lembur
+            formatWage(event, field) {
+                let rawVal = event.target.value.replace(/[^0-9]/g, '');
+                this.formData[field] = rawVal; // Simpan angka murni ke formData
+
+                let formatted = this.formatRupiah(rawVal);
+                if (field === 'base_daily_wage') this.displayWage = formatted;
+                if (field === 'overtime_rate_1x') this.displayOt1 = formatted;
+                if (field === 'overtime_rate_2x') this.displayOt2 = formatted;
+            },
+
             openCreateModal() {
                 this.isEdit = false;
                 this.formAction = "{{ route('owner.employees.store') }}";
                 this.formData = { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '', overtime_rate_1x: '', overtime_rate_2x: '' };
+                this.displayWage = '';
+                this.displayOt1 = '';
+                this.displayOt2 = '';
                 this.isFormModalOpen = true;
             },
+
             openEditModal(employee) {
                 this.isEdit = true;
                 let baseUrl = "{{ route('owner.employees.update', ':id') }}";
                 this.formAction = baseUrl.replace(':id', employee.id);
+                
                 this.formData = { 
-                    name: employee.name, username: employee.user ? employee.user.username : '',
-                    phone: employee.user ? employee.user.phone : '', status: employee.status, 
-                    base_daily_wage: employee.base_daily_wage,
-                    overtime_rate_1x: (employee.overtime_rate_1x == 0 || !employee.overtime_rate_1x) ? '' : employee.overtime_rate_1x,
-                    overtime_rate_2x: (employee.overtime_rate_2x == 0 || !employee.overtime_rate_2x) ? '' : employee.overtime_rate_2x
+                    name: employee.name, 
+                    username: employee.user ? employee.user.username : '',
+                    phone: employee.user ? employee.user.phone : '', 
+                    status: employee.status, 
+                    base_daily_wage: employee.base_daily_wage || '',
+                    overtime_rate_1x: employee.overtime_rate_1x || '',
+                    overtime_rate_2x: employee.overtime_rate_2x || ''
                 };
+
+                // Munculkan format titik rupiah pada saat modal edit dibuka
+                this.displayWage = this.formatRupiah(employee.base_daily_wage || '');
+                this.displayOt1 = this.formatRupiah(employee.overtime_rate_1x || '');
+                this.displayOt2 = this.formatRupiah(employee.overtime_rate_2x || '');
+
                 this.isFormModalOpen = true;
             },
+
             closeFormModal() { this.isFormModalOpen = false; },
+
             openDeleteModal(id, name) {
                 let baseUrl = "{{ route('owner.employees.destroy', ':id') }}";
                 this.deleteActionUrl = baseUrl.replace(':id', id);

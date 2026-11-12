@@ -96,28 +96,36 @@ class PayrollService
         return [$start, $end];
     }
 
-    public function summarizeEmployee(Employee $employee, Carbon $start, Carbon $end): array
+        public function summarizeEmployee(Employee $employee, Carbon $start, Carbon $end): array
     {
-        $rows = $employee->attendances()
+        $all = $employee->attendances()
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->whereNotNull('check_in_at')
             ->get();
 
-                $hourly = $employee->base_daily_wage / config('payroll.regular_hours');
-        $meal   = $rows->where('daily_wage', '>', 0)->count() * config('payroll.meal_allowance');
-        $base   = round($rows->sum('regular_hours') * $hourly, 2);
-        $total  = $rows->sum('daily_wage');
+        $rows = $all->whereNotNull('check_in_at');
+
+        $sickCount = $all->where('attendance_status', 'izin_sakit')
+            ->where('sick_leave_status', 'approved')
+            ->count();
+
+        $hourly    = $employee->base_daily_wage / config('payroll.regular_hours');
+        $meal      = $rows->where('daily_wage', '>', 0)->count() * config('payroll.meal_allowance');
+        $base      = round($rows->sum('regular_hours') * $hourly, 2);
+        $wageTotal = $rows->sum('daily_wage');
+        $sickPay   = $sickCount * config('payroll.sick_allowance');
 
         return [
             'employee'       => $employee,
             'days_present'   => $rows->count(),
+            'sick_days'      => $sickCount,
             'regular_hours'  => $rows->sum('regular_hours'),
             'overtime_1x'    => $rows->sum('overtime_1x'),
             'overtime_2x'    => $rows->sum('overtime_2x'),
             'base_pay'       => $base,
             'meal_pay'       => $meal,
-            'overtime_pay'   => $total - $base - $meal,
-            'total'          => $total,
+            'overtime_pay'   => $wageTotal - $base - $meal,
+            'sick_pay'       => $sickPay,
+            'total'          => $wageTotal + $sickPay,
         ];
     }
 

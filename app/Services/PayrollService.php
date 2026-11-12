@@ -13,7 +13,13 @@ class PayrollService
      */
     public function calculateDay(Employee $employee, ?Carbon $checkIn, ?Carbon $checkOut): array
     {
-        $zero = ['regular_hours' => 0, 'overtime_1x' => 0, 'overtime_2x' => 0, 'daily_wage' => 0];
+        $zero = [
+            'worked_hours' => 0,
+            'regular_hours' => 0,
+            'overtime_1x' => 0,
+            'overtime_2x' => 0,
+            'daily_wage' => 0,
+        ];
 
         // Belum check-out -> belum bisa dihitung
         if (!$checkIn || !$checkOut || $checkOut->lessThanOrEqualTo($checkIn)) {
@@ -21,15 +27,15 @@ class PayrollService
         }
 
         $cfg = config('payroll');
+        $workedHours = $checkIn->diffInSeconds($checkOut) / 3600;
+        $regular = min($workedHours, $cfg['regular_hours']);
+        $overtime = max($workedHours - $cfg['regular_hours'], 0);
 
-        $regular = $this->overlapHours($checkIn, $checkOut,
-            $this->at($checkIn, $cfg['work_start']), $this->at($checkIn, $cfg['work_end']));
-
-        $ot1 = $this->overlapHours($checkIn, $checkOut,
-            $this->at($checkIn, $cfg['overtime_1x']['start']), $this->at($checkIn, $cfg['overtime_1x']['end']));
-
-        $ot2 = $this->overlapHours($checkIn, $checkOut,
-            $this->at($checkIn, $cfg['overtime_2x']['start']), $this->at($checkIn, $cfg['overtime_2x']['end']));
+        // Jam lembur tetap bertingkat seperti kebijakan yang sudah ada:
+        // dua jam pertama memakai tarif 1x, sisanya memakai tarif 2x.
+        $ot1Limit = $this->configuredWindowHours($cfg['overtime_1x']);
+        $ot1 = min($overtime, $ot1Limit);
+        $ot2 = max($overtime - $ot1, 0);
 
         // Tarif lembur per jam
         $hourly = $employee->base_daily_wage / $cfg['regular_hours'];
@@ -38,12 +44,14 @@ class PayrollService
         $rate1  = $employee->overtime_rate_1x > 0 ? $employee->overtime_rate_1x : $hourly * $cfg['overtime_1x']['multiplier'];
         $rate2  = $employee->overtime_rate_2x > 0 ? $employee->overtime_rate_2x : $hourly * $cfg['overtime_2x']['multiplier'];
 
-        $wage = $employee->base_daily_wage
+        $regularWage = ($employee->base_daily_wage / $cfg['regular_hours']) * $regular;
+        $wage = $regularWage
               + $cfg['meal_allowance']
               + ($ot1 * $rate1)
               + ($ot2 * $rate2);
 
         return [
+            'worked_hours'  => round($workedHours, 2),
             'regular_hours' => round($regular, 2),
             'overtime_1x'   => round($ot1, 2),
             'overtime_2x'   => round($ot2, 2),
@@ -59,7 +67,12 @@ class PayrollService
             $attendance->check_out_at
         );
 
-        $attendance->update($result);
+        $attendance->update([
+            'regular_hours' => $result['regular_hours'],
+            'overtime_1x' => $result['overtime_1x'],
+            'overtime_2x' => $result['overtime_2x'],
+            'daily_wage' => $result['daily_wage'],
+        ]);
         return $attendance;
     }
 
@@ -109,17 +122,11 @@ class PayrollService
         ];
     }
 
-    private function at(Carbon $day, string $time): Carbon
+    private function configuredWindowHours(array $window): float
     {
-        [$h, $m] = array_map('intval', explode(':', $time));
-        return $day->copy()->setTime($h, $m, 0);
-    }
+        [$startHour, $startMinute] = array_map('intval', explode(':', $window['start']));
+        [$endHour, $endMinute] = array_map('intval', explode(':', $window['end']));
 
-    private function overlapHours(Carbon $start, Carbon $end, Carbon $from, Carbon $to): float
-    {
-        $s = $start->greaterThan($from) ? $start : $from;
-        $e = $end->lessThan($to) ? $end : $to;
-
-        return $e->greaterThan($s) ? $s->diffInMinutes($e) / 60 : 0.0;
+        return (($endHour * 60) + $endMinute - (($startHour * 60) + $startMinute)) / 60;
     }
 }

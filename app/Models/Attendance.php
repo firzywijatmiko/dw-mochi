@@ -10,7 +10,7 @@ class Attendance extends Model
     use HasFactory;
 
     protected $fillable = [
-        'employees_id', 'date', 'check_in_at', 'check_out_at',
+        'employees_id', 'date', 'attendance_status', 'sick_leave_proof', 'sick_leave_status', 'check_in_at', 'check_out_at',
         'check_in_lat', 'check_in_lng', 'check_out_lat', 'check_out_lng',
         'regular_hours', 'overtime_1x', 'overtime_2x', 'daily_wage', 'notes'
     ];
@@ -28,5 +28,14 @@ class Attendance extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employees_id');
+    }
+
+    public function getWorkedHoursAttribute(): float
+    {
+        if (!$this->check_in_at || !$this->check_out_at) {
+            return 0.0;
+        }
+
+        return round($this->check_in_at->diffInSeconds($this->check_out_at) / 3600, 2);
     }
 }

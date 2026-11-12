@@ -46,8 +46,29 @@
                     <span>Mendeteksi lokasi Anda...</span>
                 </div>
 
+                @if(session('success'))
+                    <div class="bg-[#edf8f2] text-[#3f9b72] border border-[#c3ebd5] p-3 rounded-xl mb-4 text-xs font-semibold">
+                        {{ session('success') }}
+                    </div>
+                @endif
+                @if($errors->has('sick_leave'))
+                    <div class="bg-red-50 text-red-600 border border-red-200 p-3 rounded-xl mb-4 text-xs font-semibold">
+                        {{ $errors->first('sick_leave') }}
+                    </div>
+                @endif
+
                 <!-- Logika Tombol Check-In / Check-Out -->
                 @if($attendanceToday)
+                    @if($attendanceToday->attendance_status !== 'hadir')
+                        <div class="bg-[#fff4e8] border border-[#f5e3d3] p-3 rounded-xl text-sm">
+                            <p class="font-bold {{ $attendanceToday->attendance_status === 'alpa' ? 'text-red-500' : 'text-[#c28455]' }}">
+                                {{ $attendanceToday->attendance_status === 'alpa' ? 'Alpa / Tanpa Keterangan' : 'Izin sakit ' . ($attendanceToday->sick_leave_status === 'approved' ? 'disetujui' : 'menunggu persetujuan') }}
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {{ $attendanceToday->attendance_status === 'alpa' ? 'Pengajuan izin ditolak oleh Owner.' : 'Bukti foto sudah dikirim.' }}
+                            </p>
+                        </div>
+                    @else
                     <div class="flex items-center justify-between bg-[#eef5fc] border border-[#d1e3f8] p-3 rounded-xl mb-4">
                         <div class="flex items-center">
                             <span class="rounded-md bg-[#4c83b5] p-1.5 text-white mr-3">
@@ -84,6 +105,7 @@
                             Kerja bagus hari ini! Presensi telah selesai.
                         </div>
                     @endif
+                    @endif
 
                 @else
                     <!-- Tombol Check-In -->
@@ -91,6 +113,16 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
                         Check-In Sekarang
                     </button>
+                    <form action="{{ route('employee.attendances.sick_leave') }}" method="POST" enctype="multipart/form-data" class="mt-4 border-t border-gray-100 pt-4">
+                        @csrf
+                        <label for="sick_leave_proof" class="block text-xs font-bold text-[#0f2137] mb-2">Ajukan izin sakit</label>
+                        <input id="sick_leave_proof" name="sick_leave_proof" type="file" accept="image/jpeg,image/png,image/webp" required
+                               class="block w-full text-xs text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-gray-700">
+                        <p class="text-[10px] text-gray-400 mt-1">Unggah foto bukti sakit, maksimal 5 MB. Izin dapat diajukan dari mana saja.</p>
+                        <button type="submit" class="w-full mt-3 bg-[#c28455] hover:bg-[#a66f46] text-white font-bold py-2.5 rounded-xl text-xs transition">
+                            Kirim Izin Sakit
+                        </button>
+                    </form>
                 @endif
             </div>
 
@@ -136,6 +168,11 @@
                     </div>
                     
                     <div class="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-[11px] text-gray-600 font-medium">
+                        @if($att->attendance_status === 'izin_sakit')
+                        <div class="flex items-center text-[#c28455] bg-[#fff4e8] border border-[#f5e3d3] px-2 py-1 rounded">
+                            Izin sakit
+                        </div>
+                        @endif
                         <div class="flex items-center bg-gray-50 px-2 py-1 rounded border border-gray-100">
                             <svg class="w-3.5 h-3.5 mr-1 text-[#4c83b5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
                             Check - in :  {{ $att->check_in_at ? $att->check_in_at->format('H:i') : '-' }}
@@ -143,6 +180,9 @@
                         <div class="flex items-center bg-gray-50 px-2 py-1 rounded border border-gray-100">
                             <svg class="w-3.5 h-3.5 mr-1 text-[#c28455]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                             Check - out : {{ $att->check_out_at ? $att->check_out_at->format('H:i') : '-' }}
+                        </div>
+                        <div class="flex items-center bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                            Durasi: {{ number_format($att->worked_hours ?? 0, 2, ',', '.') }} jam
                         </div>
                         
                         @if($att->overtime_1x > 0 || $att->overtime_2x > 0)

@@ -22,7 +22,7 @@
         
         <div class="flex flex-wrap gap-2">
             <!-- Form Cetak Massal -->
-            <form action="{{ route('owner.orders.print_bulk') }}" method="POST" target="_blank" id="bulkPrintForm" @submit="setTimeout(() => window.location.reload(), 1000)">
+            <form action="{{ route('owner.orders.print_bulk') }}" method="POST" target="_blank" id="bulkPrintForm" @submit="handleBulkPrint()">
                 @csrf
                 <template x-for="id in selectedOrders" :key="id">
                     <input type="hidden" name="order_ids[]" :value="id">
@@ -75,7 +75,6 @@
                         'completed' => ['Selesai', 'bg-[#dff5e9] text-[#348b66]'], 
                         'cancelled' => ['Batal', 'bg-[#fee8e7] text-[#bd4d48]']
                     ];
-                    // BISA DICETAK HANYA JIKA STATUS COMPLETED DAN BELUM DICETAK
                     $canPrint = ($order->status === 'completed' && !$order->is_label_printed);
                 @endphp
                 <tr class="hover:bg-[#fcfbf9]">
@@ -93,17 +92,12 @@
                     <td class="px-3 py-3">{{ $flavors ?: '-' }}</td>
                     <td class="px-3 py-3 font-semibold">Rp {{ number_format($total, 0, ',', '.') }}</td>
                     <td class="max-w-[130px] truncate px-3 py-3">{{ $order->notes ?: '—' }}</td>
-                    <td class="px-3 py-3">{{ \Carbon\Carbon::parse($order->pickup_at)->format('d-m-Y') }}</td>
+                    <td class="px-3 py-3">{{ \Carbon\Carbon::parse($order->pickup_at)->format('d-m-Y H:i') }}</td>
                     <td class="px-3 py-3"><span class="{{ $statusStyles[$order->status][1] ?? 'bg-gray-100 text-gray-500' }} rounded-full px-2 py-1 text-[9px] font-semibold">{{ $statusStyles[$order->status][0] ?? $order->status }}</span></td>
                     <td class="px-3 py-3">
                         <div class="flex gap-2">
-                            <!-- Tombol Ubah -->
                             <button @click="openEdit(@js($order->load('details.productVariant')))" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50"><span>✎</span> Ubah</button>
-                            
-                            <!-- Tombol Hapus -->
                             <button @click="openDelete('{{ route('owner.orders.destroy', $order) }}', 'P-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}')" class="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold text-red-500 hover:bg-red-100"><span>🗑</span> Hapus</button>
-                            
-                            <!-- Tombol Label Individu -->
                             @if($canPrint)
                                 <button type="button" @click="openLabel(@js($order->load('details.productVariant')), '{{ route('owner.orders.print_label', $order) }}')" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50" title="Preview label"><span>▧</span> Label</button>
                             @elseif($order->status === 'completed' && $order->is_label_printed)
@@ -119,6 +113,10 @@
             @endforelse
             </tbody>
         </table>
+    </div>
+
+    <div class="mt-4">
+        {{ $orders->links() }}
     </div>
 
     <!-- MODAL FORM PESANAN -->
@@ -289,7 +287,6 @@ function orderManager() {
         variants: [{ variant_id: '', quantity: 1, price: 0 }] 
     };
     
-    // HANYA AMBIL PESANAN SELESAI YANG BELUM DICETAK LABELNYA
     const printableOrderIds = @json($orders->where('status', 'completed')->where('is_label_printed', false)->pluck('id')->values());
 
     return {
@@ -340,6 +337,13 @@ function orderManager() {
             }
         },
 
+        handleBulkPrint() {
+            // Berikan jeda waktu 2 detik agar form terkirim dan tab PDF baru terbuka sempurna, baru halaman direfresh
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        },
+
         addVariant() { this.form.variants.push({ variant_id: '', quantity: 1, price: 0 }); },
         removeVariant(index) { if (this.form.variants.length > 1) this.form.variants.splice(index, 1); },
         updatePrice(index) {
@@ -372,7 +376,6 @@ function orderManager() {
         openLabel(order, url) { this.labelOrder = order; this.labelUrl = url; this.showLabel = true; },
         printLabel() { 
             window.open(this.labelUrl, 'labelPrintPopup', 'width=520,height=720,resizable=yes,scrollbars=yes');
-            // Auto reload halaman setelah cetak PDF agar status label di tabel diperbarui menjadi abu-abu
             setTimeout(() => { window.location.reload(); }, 1200);
         },
         formatPickup(value) { 

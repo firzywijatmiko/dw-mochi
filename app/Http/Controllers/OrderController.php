@@ -46,7 +46,11 @@ class OrderController extends Controller
             'variants.*.quantity' => 'required|integer|min:1',
             'variants.*.price' => 'required|numeric|min:0',
         ], [
-            'customer_phone.regex' => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.'
+            'customer_name.required' => 'Nama pelanggan wajib diisi.',
+            'customer_phone.required' => 'Nomor HP wajib diisi.',
+            'customer_phone.regex' => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.',
+            'pickup_at.required' => 'Tanggal dan waktu ambil wajib diisi.',
+            'variants.required' => 'Pilih minimal satu varian produk.'
         ]);
 
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at)) {
@@ -69,6 +73,7 @@ class OrderController extends Controller
             'variants.*.quantity' => 'required|integer|min:1',
             'variants.*.price' => 'required|numeric|min:0',
         ], [
+            'customer_name.required' => 'Nama pelanggan wajib diisi.',
             'customer_phone.regex' => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.'
         ]);
 
@@ -76,7 +81,6 @@ class OrderController extends Controller
             return back()->with('error', 'Sudah ada pesanan dengan nomor HP tersebut pada tanggal ambil yang sama.')->withInput();
         }
 
-        // RESET STATUS CETAK: Setiap kali pesanan diubah, kembalikan is_label_printed ke false
         $updateData = $request->only(['customer_name', 'customer_phone', 'pickup_at', 'status', 'notes']);
         $updateData['is_label_printed'] = false;
 
@@ -101,16 +105,22 @@ class OrderController extends Controller
 
     public function parseWhatsApp(Request $request)
     {
-        $request->validate(['raw_template' => 'required|string']);
+        $request->validate([
+            'raw_template' => 'required|string'
+        ], [
+            'raw_template.required' => 'Teks WhatsApp tidak boleh kosong.'
+        ]);
 
         $templateText = $request->input('raw_template');
         $parsedData = $this->waParser->parse($templateText);
 
         if ($request->wantsJson() || $request->ajax()) {
             if (!$parsedData['is_valid']) {
+                $errorMessage = "Gagal memproses: " . implode(', ', $parsedData['errors']) . ".";
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'Format Pesan Tidak Sesuai'
+                    'message' => $errorMessage 
                 ], 422); 
             }
             
@@ -118,7 +128,12 @@ class OrderController extends Controller
         }
 
         if (!$parsedData['is_valid']) {
-            return back()->with('error', 'Format Pesan Tidak Sesuai');
+            $errorMessage = "Gagal memproses: " . implode(', ', $parsedData['errors']) . ".";
+            return back()->with('error', $errorMessage);
+        }
+
+        if (!empty($parsedData['pickup_at'])) {
+            $parsedData['pickup_at'] = str_replace(' ', 'T', $parsedData['pickup_at']);
         }
 
         $variants = ProductVariant::where('is_active', true)->orderBy('name')->get();
@@ -129,9 +144,11 @@ class OrderController extends Controller
 
     public function printLabel(Order $order)
     {
+        if ($order->is_label_printed) {
+            return back()->with('error', 'Label untuk pesanan ini sudah pernah dicetak.');
+        }
+
         $order->load('details.productVariant');
-        
-        // TANDAI SUDAH DICETAK
         $order->update(['is_label_printed' => true]);
 
         $pdf = Pdf::loadView('owner.orders.label_pdf', compact('order'))
@@ -148,7 +165,14 @@ class OrderController extends Controller
             return back()->with('error', 'Pilih minimal satu pesanan yang ingin dicetak labelnya.');
         }
 
-        // TANDAI SEMUA PESANAN TERPILIH SEBAGAI SUDAH DICETAK
+        $alreadyPrinted = Order::whereIn('id', $orderIds)
+                               ->where('is_label_printed', true)
+                               ->exists();
+
+        if ($alreadyPrinted) {
+            return back()->with('error', 'Terdapat pesanan yang sudah pernah dicetak labelnya. Silakan hapus centang pada pesanan tersebut.');
+        }
+
         Order::whereIn('id', $orderIds)->update(['is_label_printed' => true]);
 
         $orders = Order::with('details.productVariant')

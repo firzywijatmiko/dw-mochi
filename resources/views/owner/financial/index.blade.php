@@ -1,11 +1,10 @@
-<!-- resources/views/owner/financial/index.blade.php -->
 @extends('layouts.app')
 
 @section('header_title', 'Keuangan & Laporan')
 
 @section('content')
 <style>[x-cloak] { display: none !important; }</style>
-<div x-data="{ openModal: false, openEditModal: false, openDeleteModal: false, deleteId: '', deleteItemName: '', editId: '', editItemName: '', editAmount: '', editDate: '', editNotes: '' }" class="space-y-4">
+<div x-data="{ openDownloadModal: false, openModal: false, openEditModal: false, openDeleteModal: false, deleteId: '', deleteItemName: '', editId: '', editItemName: '', editAmount: '', editDate: '', editNotes: '' }" class="space-y-4">
 
     @if(session('success'))
         <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">{{ session('success') }}</div>
@@ -13,6 +12,39 @@
     @if($errors->any())
         <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{{ $errors->first() }}</div>
     @endif
+
+    <!-- FILTER PERIODE & TOMBOL UNDUH -->
+    <div class="flex flex-col sm:flex-row flex-wrap sm:items-end justify-between gap-3">
+        <form method="GET" action="{{ route('owner.financial.index') }}" class="flex flex-wrap items-end gap-3 bg-white p-3 rounded-lg border border-[#e7e0d8] shadow-sm">
+            <div>
+                <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Dari Tanggal</label>
+                <input type="date" name="start_date" value="{{ $startDate }}" class="px-3 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
+            </div>
+            <div>
+                <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Sampai</label>
+                <input type="date" name="end_date" value="{{ $endDate }}" class="px-3 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
+            </div>
+            <button type="submit" class="bg-[#0f2137] text-white px-4 py-2 rounded-md text-xs font-semibold hover:bg-[#183252] transition">Tampilkan</button>
+        </form>
+
+        <button @click="openDownloadModal = true" class="inline-flex items-center justify-center gap-1.5 border border-gray-200 bg-white px-4 py-2 rounded-md text-xs font-semibold text-gray-600 hover:bg-gray-50 transition shadow-sm">
+            <span>⎙</span> Unduh PDF
+        </button>
+    </div>
+
+    <!-- MODAL KONFIRMASI UNDUH PDF -->
+    <div x-cloak x-show="openDownloadModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative text-center" @click.away="openDownloadModal = false">
+            <h3 class="text-lg font-bold text-[#0f2137] mb-2">Unduh Laporan?</h3>
+            <p class="text-xs text-gray-600 mb-6">Sistem akan mengunduh PDF Laporan Keuangan dari tanggal <br> <strong>{{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }}</strong> s/d <strong>{{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}</strong>.</p>
+            <div class="flex gap-2">
+                <a href="{{ route('owner.financial.index', ['start_date' => $startDate, 'end_date' => $endDate, 'download' => 1]) }}" 
+                   @click="openDownloadModal = false"
+                   class="flex-1 bg-[#0f2137] hover:bg-[#183252] text-white py-2 rounded-md text-xs font-semibold transition flex items-center justify-center">Ya, Unduh PDF</a>
+                <button type="button" @click="openDownloadModal = false" class="flex-1 border border-gray-200 py-2 rounded-md text-xs font-semibold text-gray-600 hover:bg-gray-50 transition">Batal</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Card Ringkasan -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -61,8 +93,8 @@
                                 $expensePct = (isset($chartMax) && $chartMax > 0) ? ($w['expense'] / $chartMax * 100) : 0;
                             @endphp
                             <div class="flex-1 h-full flex items-end justify-center gap-1 z-10 group">
-                                <div class="w-3 sm:w-5 bg-[#0f2137] rounded-t relative" style="height: {{ max($incomePct, 1) }}%;" title="Pemasukan: Rp {{ number_format($w['income'], 0, ',', '.') }}"></div>
-                                <div class="w-3 sm:w-5 bg-[#c28455] rounded-t relative" style="height: {{ max($expensePct, 1) }}%;" title="Pengeluaran: Rp {{ number_format($w['expense'], 0, ',', '.') }}"></div>
+                                <div class="w-3 sm:w-5 bg-[#0f2137] rounded-t relative hover:opacity-80 transition" style="height: {{ max($incomePct, 1) }}%;" title="Pemasukan: Rp {{ number_format($w['income'], 0, ',', '.') }}"></div>
+                                <div class="w-3 sm:w-5 bg-[#8b5a33] rounded-t relative hover:opacity-80 transition" style="height: {{ max($expensePct, 1) }}%;" title="Pengeluaran: Rp {{ number_format($w['expense'], 0, ',', '.') }}"></div>
                             </div>
                         @endforeach
                     </div>
@@ -79,15 +111,52 @@
         @endunless
         <div class="flex justify-center items-center space-x-4 mt-3">
             <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 bg-[#0f2137] rounded-sm"></span><span class="text-[9px] text-gray-600">Pemasukan</span></div>
-            <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 bg-[#c28455] rounded-sm"></span><span class="text-[9px] text-gray-600">Pengeluaran</span></div>
+            <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 bg-[#8b5a33] rounded-sm"></span><span class="text-[9px] text-gray-600">Pengeluaran</span></div>
         </div>
     </div>
 
-    <!-- Tabel Catatan Pengeluaran -->
+    <!-- Tabel Rincian Harian (Mewakili Pemasukan) -->
+    <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] overflow-hidden">
+        <div class="px-4 py-3 border-b border-[#e7e0d8] bg-[#faf9f7]">
+            <h3 class="font-bold text-[#0f2137] text-sm">Rincian Harian (Pemasukan & Pengeluaran)</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-[650px] w-full text-left text-[10px]">
+                <thead class="bg-[#faf9f7] uppercase text-[9px] tracking-wide text-gray-400">
+                    <tr>
+                        <th class="px-4 py-2">Tanggal</th>
+                        <th class="px-4 py-2">Pesanan</th>
+                        <th class="px-4 py-2">Pendapatan</th>
+                        <th class="px-4 py-2">Bahan Baku</th>
+                        <th class="px-4 py-2">Gaji</th>
+                        <th class="px-4 py-2">Laba Bersih</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#f1eeeb] text-gray-600">
+                    @forelse($dailyReport as $row)
+                    <tr class="hover:bg-[#fcfbf9] transition">
+                        <td class="px-4 py-2 font-medium">{{ \Carbon\Carbon::parse($row['date'])->translatedFormat('d M Y') }}</td>
+                        <td class="px-4 py-2">{{ $row['orders'] }}</td>
+                        <td class="px-4 py-2 text-[#348b66]">Rp {{ number_format($row['revenue'], 0, ',', '.') }}</td>
+                        <td class="px-4 py-2 text-[#bd4d48]">Rp {{ number_format($row['material'], 0, ',', '.') }}</td>
+                        <td class="px-4 py-2 text-[#bd4d48]">Rp {{ number_format($row['wage'], 0, ',', '.') }}</td>
+                        <td class="px-4 py-2 font-bold {{ $row['profit'] >= 0 ? 'text-[#348b66]' : 'text-[#bd4d48]' }}">
+                            Rp {{ number_format($row['profit'], 0, ',', '.') }}
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="6" class="px-4 py-6 text-center text-xs text-gray-400">Tidak ada transaksi harian pada periode ini.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tabel Catatan Pengeluaran (Detail Manual & Gaji) -->
     <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
             <h3 class="font-bold text-[#0f2137] text-sm">Catatan Pengeluaran</h3>
-            <button @click="openModal = true" class="inline-flex items-center gap-1.5 bg-[#0f2137] text-white px-3 py-1.5 rounded-md text-[10px] font-semibold hover:bg-[#183252]">
+            <button @click="openModal = true" class="inline-flex items-center gap-1.5 bg-[#0f2137] text-white px-3 py-1.5 rounded-md text-[10px] font-semibold hover:bg-[#183252] transition">
                 <span>＋</span> Catat Pengeluaran
             </button>
         </div>
@@ -106,15 +175,19 @@
                     @forelse($expenses ?? [] as $item)
                     @php $primaryKey = array_values((array)$item)[0]; @endphp
                     <tr class="hover:bg-[#fcfbf9] transition">
-                        <td class="px-4 py-3">{{ $item->item_name }}</td>
+                        <td class="px-4 py-3 font-medium">{{ $item->item_name }}</td>
                         <td class="px-4 py-3">Rp {{ number_format($item->amount, 0, ',', '.') }}</td>
                         <td class="px-4 py-3">{{ \Carbon\Carbon::parse($item->expense_date)->format('d/m/Y') }}</td>
-                        <td class="px-4 py-3 max-w-[150px] truncate">{{ $item->notes ?? '-' }}</td>
+                        <td class="px-4 py-3 max-w-[150px] truncate text-gray-500">{{ $item->notes ?? '-' }}</td>
                         <td class="px-4 py-3">
-                            <div class="flex gap-2">
-                                <button @click="openEditModal = true; editId = '{{ $primaryKey }}'; editItemName = '{{ $item->item_name }}'; editAmount = '{{ $item->amount }}'; editDate = '{{ $item->expense_date }}'; editNotes = '{{ $item->notes ?? '' }}';" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50"><span>✎</span> Ubah</button>
-                                <button @click="openDeleteModal = true; deleteId = '{{ $primaryKey }}'; deleteItemName = '{{ $item->item_name }}';" class="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold text-red-500 hover:bg-red-100"><span>🗑</span> Hapus</button>
-                            </div>
+                            @if(isset($item->type) && $item->type === 'payroll')
+                                <span class="inline-flex items-center rounded bg-gray-100 px-2 py-1 text-[9px] font-semibold text-gray-500">Otomatis (Sistem)</span>
+                            @else
+                                <div class="flex gap-2">
+                                    <button @click="openEditModal = true; editId = '{{ $primaryKey }}'; editItemName = '{{ $item->item_name }}'; editAmount = '{{ $item->amount }}'; editDate = '{{ $item->expense_date }}'; editNotes = '{{ $item->notes ?? '' }}';" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50"><span>✎</span> Ubah</button>
+                                    <button @click="openDeleteModal = true; deleteId = '{{ $primaryKey }}'; deleteItemName = '{{ $item->item_name }}';" class="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold text-red-500 hover:bg-red-100"><span>🗑</span> Hapus</button>
+                                </div>
+                            @endif
                         </td>
                     </tr>
                     @empty
@@ -126,7 +199,7 @@
     </div>
 
     <!-- MODAL TAMBAH PENGELUARAN -->
-    <div x-cloak x-show="openModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style="display: none;">
+    <div x-cloak x-show="openModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 relative" @click.away="openModal = false">
             <div class="flex justify-between border-b border-gray-100 pb-3 mb-3">
                 <h3 class="text-sm font-bold text-[#0f2137]">Catat Pengeluaran Baru</h3>
@@ -147,15 +220,15 @@
                     <input type="text" name="notes" placeholder="Opsional" class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
                 </label>
                 <div class="flex gap-2 pt-2">
-                    <button type="submit" class="flex-1 bg-[#0f2137] text-white px-4 py-2 rounded-md text-xs font-semibold">Simpan</button>
-                    <button type="button" @click="openModal = false" class="flex-1 border border-gray-200 px-4 py-2 rounded-md text-xs text-gray-600">Batal</button>
+                    <button type="submit" class="flex-1 bg-[#0f2137] text-white px-4 py-2 rounded-md text-xs font-semibold hover:bg-[#183252] transition">Simpan</button>
+                    <button type="button" @click="openModal = false" class="flex-1 border border-gray-200 px-4 py-2 rounded-md text-xs text-gray-600 hover:bg-gray-50 transition">Batal</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- MODAL EDIT PENGELUARAN -->
-    <div x-cloak x-show="openEditModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style="display: none;">
+    <div x-cloak x-show="openEditModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 relative" @click.away="openEditModal = false">
             <div class="flex justify-between border-b border-gray-100 pb-3 mb-3">
                 <h3 class="text-sm font-bold text-[#0f2137]">Ubah Catatan Pengeluaran</h3>
@@ -176,24 +249,24 @@
                     <input type="text" name="notes" x-model="editNotes" placeholder="Opsional" class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
                 </label>
                 <div class="flex gap-2 pt-2">
-                    <button type="submit" class="flex-1 bg-[#0f2137] text-white px-4 py-2 rounded-md text-xs font-semibold">Simpan</button>
-                    <button type="button" @click="openEditModal = false" class="flex-1 border border-gray-200 px-4 py-2 rounded-md text-xs text-gray-600">Batal</button>
+                    <button type="submit" class="flex-1 bg-[#0f2137] text-white px-4 py-2 rounded-md text-xs font-semibold hover:bg-[#183252] transition">Simpan</button>
+                    <button type="button" @click="openEditModal = false" class="flex-1 border border-gray-200 px-4 py-2 rounded-md text-xs text-gray-600 hover:bg-gray-50 transition">Batal</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- MODAL KONFIRMASI HAPUS -->
-    <div x-cloak x-show="openDeleteModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm" style="display: none;">
+    <div x-cloak x-show="openDeleteModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 relative text-center" @click.away="openDeleteModal = false">
             <h3 class="text-sm font-bold text-[#0f2137] mb-2">Hapus Catatan?</h3>
             <p class="text-[10px] text-gray-600 mb-5">Yakin ingin menghapus catatan <strong x-text="deleteItemName"></strong>?</p>
             <div class="flex gap-2">
                 <form :action="'{{ url('/owner/keuangan/delete') }}/' + deleteId" method="POST" class="flex-1">
                     @csrf @method('DELETE')
-                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md text-xs font-semibold">Ya, Hapus</button>
+                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md text-xs font-semibold transition">Ya, Hapus</button>
                 </form>
-                <button type="button" @click="openDeleteModal = false" class="flex-1 border border-gray-200 py-2 rounded-md text-xs font-semibold text-gray-600">Batal</button>
+                <button type="button" @click="openDeleteModal = false" class="flex-1 border border-gray-200 py-2 rounded-md text-xs font-semibold text-gray-600 hover:bg-gray-50 transition">Batal</button>
             </div>
         </div>
     </div>

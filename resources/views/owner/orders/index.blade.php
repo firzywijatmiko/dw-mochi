@@ -115,6 +115,10 @@
         </table>
     </div>
 
+    <div class="mt-4">
+        {{ $orders->links() }}
+    </div>
+
     <!-- MODAL FORM PESANAN -->
     <div x-show="showForm" style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
         <div @click.away="showForm=false" class="w-full max-w-xl rounded-xl bg-white shadow-xl">

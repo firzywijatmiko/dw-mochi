@@ -29,7 +29,9 @@ class OrderController extends Controller
                 return $query->where('status', $status);
             })
             ->latest()
-            ->get();
+            ->paginate(25)
+            ->withQueryString(); // Mempertahankan parameter filter status saat pindah halaman pagination
+
         $variants = ProductVariant::where('is_active', true)->orderBy('name')->get();
 
         return view('owner.orders.index', compact('orders', 'variants', 'status'));

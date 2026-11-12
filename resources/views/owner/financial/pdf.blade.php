@@ -36,6 +36,39 @@
         </tr>
     </table>
 
+    <!-- RINCIAN HARIAN (MENGGUNAKAN $allDailyReport AGAR TERCETAK SEMUA DI PDF) -->
+    <h1 style="margin-top:18px;font-size:13px;">Rincian Harian</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Pesanan</th>
+                <th>Pendapatan</th>
+                <th>Bahan Baku</th>
+                <th>Gaji</th>
+                <th>Laba</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($allDailyReport ?? [] as $row)
+            <tr>
+                <td>{{ \Carbon\Carbon::parse($row['date'])->format('d/m/Y') }}</td>
+                <td class="right">{{ $row['orders'] }}</td>
+                <td class="right">Rp {{ number_format($row['revenue'], 0, ',', '.') }}</td>
+                <td class="right">Rp {{ number_format($row['material'], 0, ',', '.') }}</td>
+                <td class="right">Rp {{ number_format($row['wage'], 0, ',', '.') }}</td>
+                <td class="right" style="{{ $row['profit'] >= 0 ? 'color: #348b66;' : 'color: #bd4d48;' }}">
+                    Rp {{ number_format($row['profit'], 0, ',', '.') }}
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="6" style="text-align: center; color: #888;">Tidak ada transaksi harian pada periode ini.</td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+
     <h1 style="margin-top:18px;font-size:13px;">Rincian Pengeluaran</h1>
     <table>
         <thead>
@@ -46,7 +79,7 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($expenses as $item)
+            @forelse($mergedExpenses as $item)
             <tr>
                 <td>{{ \Carbon\Carbon::parse($item->expense_date)->format('d/m/Y') }}</td>
                 <td>

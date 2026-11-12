@@ -4,8 +4,40 @@
 
 @section('content')
 <style>[x-cloak] { display: none !important; }</style>
-<div x-data="{ openDownloadModal: false, openModal: false, openEditModal: false, openDeleteModal: false, deleteId: '', deleteItemName: '', editId: '', editItemName: '', editAmount: '', editDate: '', editNotes: '' }" class="space-y-4">
-
+<div x-data="{ 
+    openDownloadModal: false, 
+    openModal: false, 
+    openEditModal: false, 
+    openDeleteModal: false, 
+    deleteId: '', 
+    deleteItemName: '', 
+    editId: '', 
+    editItemName: '', 
+    editAmount: '', 
+    editDate: '', 
+    editNotes: '',
+    
+    // REVISI DI SINI: Mencegah angka nol di depan (00001 jadi 1)
+    formatRupiah(value) {
+        if (!value) return '';
+        let numberString = value.toString().replace(/[^,\d]/g, '').toString();
+        
+        // Hilangkan angka 0 di depan jika ada angka lain di belakangnya (misal: 05 jadi 5, 0001 jadi 1)
+        if (numberString.length > 1) {
+            numberString = numberString.replace(/^0+/, '');
+        }
+        
+        let split = numberString.split(',');
+        let sisa = split[0].length % 3;
+        let rupiah = split[0].substr(0, sisa);
+        let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+        if (ribuan) {
+            let separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+        return split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+    }
+}" class="space-y-4">
     @if(session('success'))
         <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">{{ session('success') }}</div>
     @endif
@@ -115,7 +147,7 @@
         </div>
     </div>
 
-    <!-- Tabel Rincian Harian (Mewakili Pemasukan) -->
+    <!-- Tabel Rincian Harian -->
     <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] overflow-hidden">
         <div class="px-4 py-3 border-b border-[#e7e0d8] bg-[#faf9f7]">
             <h3 class="font-bold text-[#0f2137] text-sm">Rincian Harian (Pemasukan & Pengeluaran)</h3>
@@ -152,7 +184,11 @@
         </div>
     </div>
 
-    <!-- Tabel Catatan Pengeluaran (Detail Manual & Gaji) -->
+    <div class="mt-2">
+        {{ $dailyReport->links() }}
+    </div>
+
+    <!-- Tabel Catatan Pengeluaran -->
     <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
             <h3 class="font-bold text-[#0f2137] text-sm">Catatan Pengeluaran</h3>
@@ -184,7 +220,7 @@
                                 <span class="inline-flex items-center rounded bg-gray-100 px-2 py-1 text-[9px] font-semibold text-gray-500">Otomatis (Sistem)</span>
                             @else
                                 <div class="flex gap-2">
-                                    <button @click="openEditModal = true; editId = '{{ $primaryKey }}'; editItemName = '{{ $item->item_name }}'; editAmount = '{{ $item->amount }}'; editDate = '{{ $item->expense_date }}'; editNotes = '{{ $item->notes ?? '' }}';" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50"><span>✎</span> Ubah</button>
+                                    <button @click="openEditModal = true; editId = '{{ $primaryKey }}'; editItemName = '{{ $item->item_name }}'; editAmount = formatRupiah('{{ $item->amount }}'); editDate = '{{ $item->expense_date }}'; editNotes = '{{ $item->notes ?? '' }}';" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50"><span>✎</span> Ubah</button>
                                     <button @click="openDeleteModal = true; deleteId = '{{ $primaryKey }}'; deleteItemName = '{{ $item->item_name }}';" class="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold text-red-500 hover:bg-red-100"><span>🗑</span> Hapus</button>
                                 </div>
                             @endif
@@ -198,7 +234,11 @@
         </div>
     </div>
 
-    <!-- MODAL TAMBAH PENGELUARAN -->
+    <div class="mt-2">
+        {{ $expenses->links() }}
+    </div>
+
+    <!-- MODAL TAMBAH PENGELUARAN (Dengan Format Titik Otomatis) -->
     <div x-cloak x-show="openModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 relative" @click.away="openModal = false">
             <div class="flex justify-between border-b border-gray-100 pb-3 mb-3">
@@ -211,7 +251,7 @@
                     <input type="text" name="item_name" required placeholder="cth: Bahan baku tepung" class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
                 </label>
                 <label class="block text-[10px] font-semibold text-gray-600">NOMINAL (RP) *
-                    <input type="number" name="amount" required placeholder="0" min="0" onkeydown="if (['-', '+', 'e', 'E'].includes(event.key)) event.preventDefault();" class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
+                    <input type="text" name="amount" x-data="{ val: '' }" x-model="val" @input="val = formatRupiah(val)" required placeholder="0" class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
                 </label>
                 <label class="block text-[10px] font-semibold text-gray-600">TANGGAL *
                     <input type="date" name="expense_date" required class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
@@ -227,7 +267,7 @@
         </div>
     </div>
 
-    <!-- MODAL EDIT PENGELUARAN -->
+    <!-- MODAL EDIT PENGELUARAN (Dengan Format Titik Otomatis) -->
     <div x-cloak x-show="openEditModal" class="fixed inset-0 bg-[#0f2137]/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-5 relative" @click.away="openEditModal = false">
             <div class="flex justify-between border-b border-gray-100 pb-3 mb-3">
@@ -240,7 +280,7 @@
                     <input type="text" name="item_name" x-model="editItemName" required class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
                 </label>
                 <label class="block text-[10px] font-semibold text-gray-600">NOMINAL (RP) *
-                    <input type="number" name="amount" x-model="editAmount" required min="0" onkeydown="if (['-', '+', 'e', 'E'].includes(event.key)) event.preventDefault();" class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
+                    <input type="text" name="amount" x-model="editAmount" @input="editAmount = formatRupiah(editAmount)" required class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">
                 </label>
                 <label class="block text-[10px] font-semibold text-gray-600">TANGGAL *
                     <input type="date" name="expense_date" x-model="editDate" required class="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-xs">

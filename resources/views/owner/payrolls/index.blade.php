@@ -1,11 +1,9 @@
-<!-- resources/views/owner/payrolls/index.blade.php -->
 @extends('layouts.app')
 
 @section('header_title', 'Penggajian')
 
 @section('content')
-<style>[x-cloak] { display: none !important; }</style>
-<div x-data="payrollPage()" class="space-y-4">
+<div class="space-y-4">
 
     @if(session('success'))
         <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">{{ session('success') }}</div>
@@ -14,7 +12,7 @@
         <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{{ $errors->first() }}</div>
     @endif
 
-    <!-- Ringkasan + filter -->
+    <!-- Ringkasan + Filter (Bulan & Karyawan) -->
     <div class="flex flex-col sm:flex-row flex-wrap sm:items-end gap-3">
         <div class="flex-1 bg-white rounded-lg shadow-sm border border-[#e7e0d8] px-4 py-3 flex items-center gap-3">
             <div class="p-2 bg-[#fff6d8] text-[#a17b1c] rounded-md">
@@ -27,29 +25,47 @@
         </div>
 
         <div class="flex flex-wrap flex-1 gap-3">
+            <!-- Filter Bulan -->
             <form method="GET" action="{{ route('owner.payrolls.index') }}" class="flex-1 min-w-[120px]">
+                @if(request('employee_id'))
+                    <input type="hidden" name="employee_id" value="{{ request('employee_id') }}">
+                @endif
                 <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Filter Bulan</label>
                 <select name="month" onchange="this.form.submit()" class="w-full px-3 py-1.5 border border-gray-200 rounded-md text-xs bg-white focus:ring-1 focus:ring-[#0f2137] outline-none">
-                    <option value="">Semua</option>
+                    <option value="">Semua Bulan</option>
                     @foreach($monthOptions as $value => $label)
                         <option value="{{ $value }}" {{ $month === $value ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
             </form>
 
-            <div class="flex-1 min-w-[150px]">
-                <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Riwayat Karyawan</label>
-                <select x-model="empId" @change="open = empId !== ''" class="w-full px-3 py-1.5 border border-gray-200 rounded-md text-xs bg-white focus:ring-1 focus:ring-[#0f2137] outline-none">
-                    <option value="">— Pilih karyawan —</option>
+            <!-- Filter Karyawan (Langsung Filter Tabel Utama) -->
+            <form method="GET" action="{{ route('owner.payrolls.index') }}" class="flex-1 min-w-[150px]">
+                @if(request('month'))
+                    <input type="hidden" name="month" value="{{ request('month') }}">
+                @endif
+                <label class="block text-[10px] font-semibold text-gray-600 uppercase mb-1">Filter Karyawan</label>
+                <select name="employee_id" onchange="this.form.submit()" class="w-full px-3 py-1.5 border border-gray-200 rounded-md text-xs bg-white focus:ring-1 focus:ring-[#0f2137] outline-none">
+                    <option value="">— Semua Karyawan —</option>
                     @foreach($employees as $emp)
-                        <option value="{{ $emp->id }}">{{ $emp->name }}</option>
+                        <option value="{{ $emp->id }}" {{ (isset($selectedEmployee) && $selectedEmployee == $emp->id) ? 'selected' : '' }}>
+                            {{ $emp->name }}
+                        </option>
                     @endforeach
                 </select>
-            </div>
+            </form>
         </div>
     </div>
 
-    <!-- Tabel penggajian -->
+    <!-- Tombol Reset Filter jika sedang aktif -->
+    @if(request('month') || request('employee_id'))
+        <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md border border-gray-200 text-xs">
+            <span class="text-gray-600">Menampilkan data filter aktif.</span>
+            <a href="{{ route('owner.payrolls.index') }}" class="text-[#0f2137] font-semibold hover:underline">Reset Filter ↺</a>
+        </div>
+    @endif
+
+    <!-- Tabel Penggajian -->
     <div class="overflow-x-auto rounded-lg border border-[#e7e0d8] bg-white shadow-sm">
         <table class="min-w-[700px] w-full text-left text-[10px]">
             <thead class="bg-[#faf9f7] uppercase text-[9px] tracking-wide text-gray-400">
@@ -98,63 +114,15 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data gaji.</td></tr>
+                <tr><td colspan="6" class="px-4 py-8 text-center text-xs text-gray-400">Tidak ada data gaji yang sesuai dengan filter.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
-    <!-- MODAL RIWAYAT GAJI -->
-    <div x-cloak x-show="open" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
-        <div @click.away="open = false; empId = ''" class="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden" x-transition>
-            <div class="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-                <h3 class="font-bold text-[#0f2137] text-sm">Riwayat Gaji — <span x-text="names[empId]"></span></h3>
-                <button type="button" @click="open = false; empId = ''" class="text-gray-400">✕</button>
-            </div>
-            
-            <div class="overflow-x-auto max-h-[70vh]">
-                <table class="w-full text-left text-[10px]">
-                    <thead class="uppercase text-[9px] tracking-wide text-gray-400 bg-[#faf9f7] sticky top-0">
-                        <tr>
-                            <th class="px-4 py-3">Periode</th>
-                            <th class="px-4 py-3">Gapok</th>
-                            <th class="px-4 py-3">Lembur</th>
-                            <th class="px-4 py-3">Total</th>
-                            <th class="px-4 py-3">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-[#f1eeeb] text-gray-600">
-                        <template x-for="row in (histories[empId] || [])" :key="row.id">
-                            <tr>
-                                <td class="px-4 py-2" x-text="row.period"></td>
-                                <td class="px-4 py-2" x-text="row.base"></td>
-                                <td class="px-4 py-2" x-text="row.overtime"></td>
-                                <td class="px-4 py-2 font-bold text-gray-800" x-text="row.total"></td>
-                                <td class="px-4 py-2">
-                                    <span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold"
-                                          :class="row.paid ? 'bg-[#dff5e9] text-[#348b66]' : 'bg-[#fff6d8] text-[#a17b1c]'"
-                                          x-text="row.status"></span>
-                                </td>
-                            </tr>
-                        </template>
-                        <template x-if="!(histories[empId] || []).length">
-                            <tr><td colspan="5" class="px-4 py-6 text-center text-xs text-gray-400">Belum ada riwayat gaji.</td></tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="mt-4">
+        {{ $payrolls->links() }}
     </div>
-</div>
 
-<script>
-    function payrollPage() {
-        return {
-            open: false,
-            empId: '',
-            histories: @json($histories),
-            names: @json($employeeNames),
-        }
-    }
-</script>
+</div>
 @endsection

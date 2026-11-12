@@ -103,7 +103,7 @@ class DashboardController extends Controller
             ->get();
 
         $totalGaji = $weeklyAttendances->sum('daily_wage');
-        $totalKehadiran = $weeklyAttendances->count();
+        $totalKehadiran = $weeklyAttendances->where('attendance_status', '!=', 'alpa')->count();
         $totalLembur = $weeklyAttendances->sum(function ($att) {
             return $att->overtime_1x + $att->overtime_2x;
         });

@@ -34,7 +34,8 @@
             <div class="bg-white p-5 rounded-xl shadow-sm border border-[#e7e0d8] hover:shadow-md transition">
                 <div class="flex justify-between items-start mb-3">
                     <div class="font-bold text-gray-800 text-sm sm:text-base">{{ $att->date->translatedFormat('l, d M Y') }}</div>
-                    <div class="font-bold text-[#348b66] bg-[#dff5e9] px-2 py-1 rounded-md text-xs sm:text-sm border border-[#c3ebd5]">
+                    <div class="font-bold {{ $att->attendance_status === 'izin_sakit' ? 'text-[#c28455] bg-[#fff4e8] border-[#f5e3d3]' : 'text-[#348b66] bg-[#dff5e9] border-[#c3ebd5]' }} px-2 py-1 rounded-md text-xs sm:text-sm border">
+                        @if($att->attendance_status === 'izin_sakit') Izin sakit - @endif
                         Rp {{ number_format($att->daily_wage, 0, ',', '.') }}
                     </div>
                 </div>
@@ -47,6 +48,10 @@
                     <div class="flex items-center bg-gray-50 border border-gray-100 rounded-lg p-2">
                         <svg class="w-4 h-4 mr-2 text-[#c28455]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                         Pulang: <span class="ml-1 font-semibold">{{ $att->check_out_at ? $att->check_out_at->format('H:i') : '-' }}</span>
+                    </div>
+                    <div class="flex items-center bg-gray-50 border border-gray-100 rounded-lg p-2">
+                        <svg class="w-4 h-4 mr-2 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Durasi kerja: <span class="ml-1 font-semibold">{{ number_format($att->worked_hours ?? 0, 2, ',', '.') }} jam</span>
                     </div>
                     @if($att->overtime_1x > 0 || $att->overtime_2x > 0)
                     <div class="flex items-center text-[#a17b1c] mt-1 font-semibold bg-[#fff6d8] p-2 rounded-lg border border-[#f5e3d3] w-max">

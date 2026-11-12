@@ -21,8 +21,8 @@
         </div>
         
         <div class="flex flex-wrap gap-2">
-            <!-- Form untuk Cetak Label Terpilih (Massal - Hanya untuk yang statusnya selesai) -->
-            <form action="{{ route('owner.orders.print_bulk') }}" method="POST" target="_blank" id="bulkPrintForm">
+            <!-- Form Cetak Massal -->
+            <form action="{{ route('owner.orders.print_bulk') }}" method="POST" target="_blank" id="bulkPrintForm" @submit="handleBulkPrint()">
                 @csrf
                 <template x-for="id in selectedOrders" :key="id">
                     <input type="hidden" name="order_ids[]" :value="id">
@@ -43,14 +43,13 @@
         </div>
     </div>
 
-    <!-- Wrapper Tabel -->
+    <!-- Tabel Pesanan -->
     <div class="overflow-x-auto rounded-lg border border-[#e7e0d8] bg-white shadow-sm">
         <table class="min-w-[1040px] w-full text-left text-[10px]">
             <thead class="bg-[#faf9f7] uppercase text-[9px] tracking-wide text-gray-400">
                 <tr>
                     <th class="px-3 py-3 w-8 text-center">
-                        <!-- Checkbox Select All hanya mencentang baris yang statusnya completed -->
-                        <input type="checkbox" @click="toggleSelectAll($event)" class="rounded border-gray-300" title="Pilih semua yang statusnya selesai">
+                        <input type="checkbox" @click="toggleSelectAll($event)" class="rounded border-gray-300" title="Pilih semua pesanan selesai yang belum dicetak">
                     </th>
                     <th class="px-3 py-3">No. Pesanan</th>
                     <th class="px-3 py-3">Nama Pelanggan</th>
@@ -70,14 +69,20 @@
                     $quantity = $order->details->sum('quantity');
                     $total = $order->details->sum(function ($detail) { return $detail->quantity * $detail->unit_price; });
                     $flavors = $order->details->map(function ($detail) { return optional($detail->productVariant)->name; })->filter()->implode(', ');
-                    $statusStyles = ['pending' => ['Menunggu Produksi', 'bg-[#fff6d8] text-[#a17b1c]'], 'process' => ['Sedang Diproses', 'bg-[#e5f0ff] text-[#3975b5]'], 'completed' => ['Selesai', 'bg-[#dff5e9] text-[#348b66]'], 'cancelled' => ['Batal', 'bg-[#fee8e7] text-[#bd4d48]']];
+                    $statusStyles = [
+                        'pending' => ['Menunggu Produksi', 'bg-[#fff6d8] text-[#a17b1c]'], 
+                        'process' => ['Sedang Diproses', 'bg-[#e5f0ff] text-[#3975b5]'], 
+                        'completed' => ['Selesai', 'bg-[#dff5e9] text-[#348b66]'], 
+                        'cancelled' => ['Batal', 'bg-[#fee8e7] text-[#bd4d48]']
+                    ];
+                    $canPrint = ($order->status === 'completed' && !$order->is_label_printed);
                 @endphp
                 <tr class="hover:bg-[#fcfbf9]">
                     <td class="px-3 py-3 text-center">
-                        @if($order->status === 'completed')
+                        @if($canPrint)
                             <input type="checkbox" value="{{ $order->id }}" x-model.number="selectedOrders" class="rounded border-gray-300">
                         @else
-                            <input type="checkbox" disabled class="rounded border-gray-200 bg-gray-100 cursor-not-allowed opacity-50" title="Label hanya untuk pesanan selesai">
+                            <input type="checkbox" disabled class="rounded border-gray-200 bg-gray-100 cursor-not-allowed opacity-50" title="{{ $order->status !== 'completed' ? 'Hanya untuk pesanan selesai' : 'Label sudah dicetak' }}">
                         @endif
                     </td>
                     <td class="px-3 py-3 font-semibold text-[#0f2137]">P-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}</td>
@@ -87,21 +92,18 @@
                     <td class="px-3 py-3">{{ $flavors ?: '-' }}</td>
                     <td class="px-3 py-3 font-semibold">Rp {{ number_format($total, 0, ',', '.') }}</td>
                     <td class="max-w-[130px] truncate px-3 py-3">{{ $order->notes ?: '—' }}</td>
-                    <td class="px-3 py-3">{{ \Carbon\Carbon::parse($order->pickup_at)->format('d-m-Y') }}</td>
+                    <td class="px-3 py-3">{{ \Carbon\Carbon::parse($order->pickup_at)->format('d-m-Y H:i') }}</td>
                     <td class="px-3 py-3"><span class="{{ $statusStyles[$order->status][1] ?? 'bg-gray-100 text-gray-500' }} rounded-full px-2 py-1 text-[9px] font-semibold">{{ $statusStyles[$order->status][0] ?? $order->status }}</span></td>
                     <td class="px-3 py-3">
                         <div class="flex gap-2">
-                            <!-- Tombol Ubah -->
                             <button @click="openEdit(@js($order->load('details.productVariant')))" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50"><span>✎</span> Ubah</button>
-                            
-                            <!-- Tombol Hapus -->
                             <button @click="openDelete('{{ route('owner.orders.destroy', $order) }}', 'P-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}')" class="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-[10px] font-semibold text-red-500 hover:bg-red-100"><span>🗑</span> Hapus</button>
-                            
-                            <!-- Tombol Label Individu (Hanya aktif jika status 'completed') -->
-                            @if($order->status === 'completed')
+                            @if($canPrint)
                                 <button type="button" @click="openLabel(@js($order->load('details.productVariant')), '{{ route('owner.orders.print_label', $order) }}')" class="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-semibold text-gray-600 hover:bg-gray-50" title="Preview label"><span>▧</span> Label</button>
+                            @elseif($order->status === 'completed' && $order->is_label_printed)
+                                <span class="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-gray-100 px-3 py-1 text-[10px] font-semibold text-gray-400 opacity-60 cursor-not-allowed" title="Label sudah dicetak"><span>✓</span> Label</span>
                             @else
-                                <span class="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-gray-50 px-3 py-1 text-[10px] text-gray-300 cursor-not-allowed" title="Label hanya untuk pesanan selesai"><span>▧</span> Label</span>
+                                <span class="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-gray-50 px-3 py-1 text-[10px] text-gray-300 opacity-50 cursor-not-allowed" title="Label hanya untuk pesanan selesai"><span>▧</span> Label</span>
                             @endif
                         </div>
                     </td>
@@ -111,6 +113,10 @@
             @endforelse
             </tbody>
         </table>
+    </div>
+
+    <div class="mt-4">
+        {{ $orders->links() }}
     </div>
 
     <!-- MODAL FORM PESANAN -->
@@ -189,14 +195,23 @@
 
     <!-- MODAL WHATSAPP PARSER -->
     <div x-show="showWa" style="display:none" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
-        <div class="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
-            <div class="flex justify-between"><h3 class="text-sm font-bold text-[#0f2137]">Parsing dari WhatsApp</h3><button @click="showWa=false" class="text-gray-400">✕</button></div>
-            <form action="{{ route('owner.orders.parse_wa') }}" method="POST" class="mt-3">
+        <div class="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl" @click.away="showWa=false">
+            <div class="flex justify-between">
+                <h3 class="text-sm font-bold text-[#0f2137]">Parsing dari WhatsApp</h3>
+                <button @click="showWa=false" class="text-gray-400">✕</button>
+            </div>
+            
+            <form action="{{ route('owner.orders.parse_wa') }}" method="POST" class="mt-3" @submit.prevent="submitWaForm($event)">
                 @csrf
-                <textarea name="raw_template" required rows="8" class="w-full rounded-md border border-gray-200 p-3 text-xs" placeholder="Tempel teks WhatsApp di sini..."></textarea>
+                <textarea name="raw_template" x-model="waText" required rows="8" class="w-full rounded-md border border-gray-200 p-3 text-xs" placeholder="Tempel teks WhatsApp di sini..."></textarea>
+                
+                <p x-show="waError" x-text="waError" class="mt-2 text-xs font-semibold text-red-500" style="display:none;"></p>
+                
                 <div class="mt-3 flex gap-2">
-                    <button class="rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white">Isi Otomatis &amp; Lanjut</button>
-                    <button type="button" @click="showWa=false" class="rounded-md border border-gray-200 px-4 py-2 text-xs">Batal</button>
+                    <button type="submit" :disabled="isParsingWa" class="rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">
+                        <span x-text="isParsingWa ? 'Mengecek...' : 'Isi Otomatis & Lanjut'"></span>
+                    </button>
+                    <button type="button" @click="showWa=false; waError=''; waText=''" class="rounded-md border border-gray-200 px-4 py-2 text-xs">Batal</button>
                 </div>
             </form>
         </div>
@@ -272,8 +287,7 @@ function orderManager() {
         variants: [{ variant_id: '', quantity: 1, price: 0 }] 
     };
     
-    // Ambil hanya ID pesanan yang statusnya 'completed' untuk fitur "Select All"
-    const completedOrderIds = @json($orders->where('status', 'completed')->pluck('id')->values());
+    const printableOrderIds = @json($orders->where('status', 'completed')->where('is_label_printed', false)->pluck('id')->values());
 
     return {
         showForm: false, showWa: false, showDelete: false, showLabel: false, editing: false, 
@@ -282,12 +296,52 @@ function orderManager() {
         selectedOrders: [], 
         form: JSON.parse(JSON.stringify(empty)),
 
+        waText: '',
+        waError: '',
+        isParsingWa: false,
+
+        async submitWaForm(event) {
+            this.waError = '';
+            this.isParsingWa = true;
+
+            try {
+                const response = await fetch('{{ route('owner.orders.parse_wa') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json' 
+                    },
+                    body: JSON.stringify({ raw_template: this.waText })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    this.waError = result.message || 'Format Pesan Tidak Sesuai';
+                } else {
+                    event.target.submit(); 
+                }
+            } catch (error) {
+                this.waError = 'Terjadi kesalahan pada server. Coba lagi.';
+            } finally {
+                this.isParsingWa = false;
+            }
+        },
+
         toggleSelectAll(event) {
             if (event.target.checked) {
-                this.selectedOrders = completedOrderIds;
+                this.selectedOrders = printableOrderIds;
             } else {
                 this.selectedOrders = [];
             }
+        },
+
+        handleBulkPrint() {
+            // Berikan jeda waktu 2 detik agar form terkirim dan tab PDF baru terbuka sempurna, baru halaman direfresh
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
         },
 
         addVariant() { this.form.variants.push({ variant_id: '', quantity: 1, price: 0 }); },
@@ -320,7 +374,10 @@ function orderManager() {
         },
         openDelete(action, name) { this.deleteAction = action; this.deleteName = name; this.showDelete = true; },
         openLabel(order, url) { this.labelOrder = order; this.labelUrl = url; this.showLabel = true; },
-        printLabel() { window.open(this.labelUrl, 'labelPrintPopup', 'width=520,height=720,resizable=yes,scrollbars=yes'); },
+        printLabel() { 
+            window.open(this.labelUrl, 'labelPrintPopup', 'width=520,height=720,resizable=yes,scrollbars=yes');
+            setTimeout(() => { window.location.reload(); }, 1200);
+        },
         formatPickup(value) { 
             if (!value) return '-'; 
             return new Date(value.replace(' ', 'T')).toLocaleString('id-ID', { 

@@ -5,14 +5,16 @@ namespace App\Services;
 class LocationValidationService
 {
     // Koordinat pusat (Ganti dengan koordinat kos kamu atau titik lokasi uji coba)
-    protected $officeLat = -7.772540348956686; 
-    protected $officeLng = 110.35613807281246;
+    //protected $officeLat = -7.772540348956686; 
+    //protected $officeLng = 110.35613807281246;
+
+    protected $officeLat = -7.9119866447222575; //ini rumah wildan
+    protected $officeLng = 110.28604856188676; //ini rumah wildan
+
     protected $maxRadius = 10000; // Diperbesar jadi 10 km selama masa testing di kos
 
     public function isWithinRadius($lat, $lng)
     {
-        // TIP: Jika ingin 100% langsung tembus tanpa validasi GPS dulu selama testing, 
-        // kamu bisa aktifkan baris ini: return true;
 
         $distance = $this->calculateHaversineDistance($lat, $lng, $this->officeLat, $this->officeLng);
         return $distance <= $this->maxRadius;

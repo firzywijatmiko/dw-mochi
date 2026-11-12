@@ -151,6 +151,7 @@ class AttendanceController extends Controller
         
         // Ambil data presensi minggu ini atau sesuai kebutuhan aplikasimu
         $attendancesList = \App\Models\Attendance::where('employees_id', $employee->id)
+            ->where('date', '>=', Carbon::now()->subYear()->toDateString())
             ->orderBy('date', 'desc')
             ->get();
 
@@ -180,10 +181,14 @@ class AttendanceController extends Controller
      */
     public function recap(Request $request)
     {
+        $retentionLimit = Carbon::now()->subYear()->toDateString();
+
         $request->validate([
-            'start_date' => 'nullable|date',
+            'start_date' => 'nullable|date|after_or_equal:' . $retentionLimit,
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'employee_id' => 'nullable|integer|exists:employees,id',
+        ], [
+            'start_date.after_or_equal' => 'Data presensi hanya ditampilkan untuk 1 tahun terakhir.',
         ]);
 
         $startDate = $request->filled('start_date')

@@ -21,9 +21,12 @@ class PayrollController extends Controller
     {
         $this->recordService->syncFromAttendances();
 
-        $query = Payroll::with('employee')
-            ->orderByDesc('period_start')
-            ->orderBy('employees_id');
+            $retentionLimit = Carbon::now()->subYear()->toDateString();
+
+            $query = Payroll::with('employee')
+                ->where('period_start', '>=', $retentionLimit)
+                ->orderByDesc('period_start')
+                ->orderBy('employees_id');
 
         // Filter bulan (format Y-m)
         $month = $request->input('month');
@@ -48,7 +51,8 @@ class PayrollController extends Controller
         });
 
         // Untuk opsi dropdown filter bulan (ambil dari seluruh data unik)
-        $allPayrolls = Payroll::orderByDesc('period_start')->get();
+        $allPayrolls = Payroll::where('period_start', '>=', $retentionLimit)
+            ->orderByDesc('period_start')->get();
         $monthOptions = $allPayrolls->map(function ($p) {
             return $p->period_start->format('Y-m');
         })->unique()->values()->mapWithKeys(function ($m) {

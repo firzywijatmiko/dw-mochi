@@ -52,6 +52,7 @@
                     $initials = collect(explode(' ', $name))->take(2)->map(function ($w) { return mb_strtoupper(mb_substr($w, 0, 1)); })->implode('');
                     $overtime = $att->overtime_1x + $att->overtime_2x;
                     $outside  = ($att->location_status ?? 'Terverifikasi') === 'Luar Radius';
+                    $isSickLeave = $att->attendance_status === 'izin_sakit';
                 @endphp
                 <tr class="hover:bg-[#fcfbf9] transition">
                     <td class="px-4 py-3">
@@ -60,14 +61,19 @@
                             <span class="text-gray-800 font-medium">{{ $name }}</span>
                         </div>
                     </td>
-                    <td class="px-4 py-3">{{ optional($att->check_in_at)->format('H:i') ?? '-' }}</td>
+                    <td class="px-4 py-3">{{ $isSickLeave ? 'Izin sakit' : (optional($att->check_in_at)->format('H:i') ?? '-') }}</td>
                     <td class="px-4 py-3">{{ optional($att->check_out_at)->format('H:i') ?? '-' }}</td>
-                    <td class="px-4 py-3">{{ number_format($att->worked_hours ?? 0, 2, ',', '.') }} jam</td>
+                    <td class="px-4 py-3">{{ $isSickLeave ? '-' : number_format($att->worked_hours ?? 0, 2, ',', '.') . ' jam' }}</td>
                     <td class="px-4 py-3 text-gray-500">
                         {{ $overtime > 0 ? rtrim(rtrim(number_format($overtime, 2, ',', '.'), '0'), ',') . ' jam' : '-' }}
                     </td>
                     <td class="px-4 py-3">
-                        @if($outside)
+                        @if($isSickLeave)
+                            <span class="inline-flex rounded-full bg-[#fff4e8] px-2 py-1 text-[9px] font-semibold text-[#c28455]">Izin sakit</span>
+                            @if($att->sick_leave_proof)
+                                <a href="{{ asset('storage/' . $att->sick_leave_proof) }}" target="_blank" class="block mt-1 text-blue-600 hover:underline">Lihat bukti</a>
+                            @endif
+                        @elseif($outside)
                             <span class="inline-flex rounded-full bg-red-50 px-2 py-1 text-[9px] font-semibold text-red-500">✗ Luar Radius</span>
                         @else
                             <span class="inline-flex rounded-full bg-[#dff5e9] px-2 py-1 text-[9px] font-semibold text-[#348b66]">✓ Terverifikasi</span>

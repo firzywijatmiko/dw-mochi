@@ -83,6 +83,35 @@ class AttendanceController extends Controller
         return response()->json(['success' => 'Check Out Berhasil. Gaji hari ini telah dikalkulasi.']);
     }
 
+    public function sickLeave(Request $request)
+    {
+        $request->validate([
+            'sick_leave_proof' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ], [
+            'sick_leave_proof.required' => 'Bukti foto wajib diunggah.',
+            'sick_leave_proof.image' => 'Bukti harus berupa file gambar.',
+            'sick_leave_proof.max' => 'Ukuran bukti foto maksimal 5 MB.',
+        ]);
+
+        $employeeId = Auth::user()->employee->id;
+        $today = Carbon::today()->toDateString();
+
+        if (Attendance::where('employees_id', $employeeId)->where('date', $today)->exists()) {
+            return back()->withErrors(['sick_leave' => 'Presensi atau izin hari ini sudah tercatat.']);
+        }
+
+        $proofPath = $request->file('sick_leave_proof')->store('sick-leaves', 'public');
+
+        Attendance::create([
+            'employees_id' => $employeeId,
+            'date' => $today,
+            'attendance_status' => 'izin_sakit',
+            'sick_leave_proof' => $proofPath,
+        ]);
+
+        return back()->with('success', 'Izin sakit berhasil dikirim.');
+    }
+
     /**
      * ACTIVITY DIAGRAM: LIHAT RIWAYAT DAN TOTAL GAJI (KARYAWAN)[cite: 23]
      */

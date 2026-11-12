@@ -34,7 +34,8 @@
             <div class="bg-white p-5 rounded-xl shadow-sm border border-[#e7e0d8] hover:shadow-md transition">
                 <div class="flex justify-between items-start mb-3">
                     <div class="font-bold text-gray-800 text-sm sm:text-base">{{ $att->date->translatedFormat('l, d M Y') }}</div>
-                    <div class="font-bold text-[#348b66] bg-[#dff5e9] px-2 py-1 rounded-md text-xs sm:text-sm border border-[#c3ebd5]">
+                    <div class="font-bold {{ $att->attendance_status === 'izin_sakit' ? 'text-[#c28455] bg-[#fff4e8] border-[#f5e3d3]' : 'text-[#348b66] bg-[#dff5e9] border-[#c3ebd5]' }} px-2 py-1 rounded-md text-xs sm:text-sm border">
+                        @if($att->attendance_status === 'izin_sakit') Izin sakit - @endif
                         Rp {{ number_format($att->daily_wage, 0, ',', '.') }}
                     </div>
                 </div>

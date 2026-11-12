@@ -69,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'employeeDashboard'])->name('dashboard');
         Route::post('/attendances/check-in', [\App\Http\Controllers\AttendanceController::class, 'checkIn'])->name('attendances.check_in');
         Route::post('/attendances/check-out', [\App\Http\Controllers\AttendanceController::class, 'checkOut'])->name('attendances.check_out');
+        Route::post('/attendances/sick-leave', [\App\Http\Controllers\AttendanceController::class, 'sickLeave'])->name('attendances.sick_leave');
         Route::get('/salary-history', [\App\Http\Controllers\AttendanceController::class, 'salaryHistory'])->name('salary_history');
     });
 });

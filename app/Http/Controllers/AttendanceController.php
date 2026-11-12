@@ -107,9 +107,39 @@ class AttendanceController extends Controller
             'date' => $today,
             'attendance_status' => 'izin_sakit',
             'sick_leave_proof' => $proofPath,
+            'sick_leave_status' => 'pending',
         ]);
 
         return back()->with('success', 'Izin sakit berhasil dikirim.');
+    }
+
+    public function approveSickLeave(Attendance $attendance)
+    {
+        if ($attendance->attendance_status !== 'izin_sakit' || $attendance->sick_leave_status !== 'pending') {
+            return back()->withErrors(['sick_leave' => 'Pengajuan izin ini sudah diproses atau tidak valid.']);
+        }
+
+        $attendance->update(['sick_leave_status' => 'approved']);
+
+        return back()->with('success', 'Izin sakit berhasil disetujui.');
+    }
+
+    public function rejectSickLeave(Attendance $attendance)
+    {
+        if ($attendance->attendance_status !== 'izin_sakit' || $attendance->sick_leave_status !== 'pending') {
+            return back()->withErrors(['sick_leave' => 'Pengajuan izin ini sudah diproses atau tidak valid.']);
+        }
+
+        $attendance->update([
+            'attendance_status' => 'alpa',
+            'sick_leave_status' => 'rejected',
+            'regular_hours' => 0,
+            'overtime_1x' => 0,
+            'overtime_2x' => 0,
+            'daily_wage' => 0,
+        ]);
+
+        return back()->with('success', 'Izin ditolak dan otomatis dihitung sebagai Alpa/Tanpa Keterangan.');
     }
 
     /**
@@ -125,7 +155,7 @@ class AttendanceController extends Controller
             ->get();
 
         // Hitung total kehadiran, lembur, dan total gaji secara aman
-        $totalKehadiran = $attendancesList->count();
+        $totalKehadiran = $attendancesList->where('attendance_status', '!=', 'alpa')->count();
         $totalLembur = $attendancesList->sum(function($att) {
             return ($att->overtime_1x ?? 0) + ($att->overtime_2x ?? 0);
         });

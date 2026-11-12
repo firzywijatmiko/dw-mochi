@@ -6,6 +6,16 @@
 @section('content')
 <style>[x-cloak] { display: none !important; }</style>
 <div class="space-y-4">
+    @if(session('success'))
+        <div class="rounded-lg border border-[#c3ebd5] bg-[#edf8f2] px-4 py-3 text-xs font-semibold text-[#348b66]">
+            {{ session('success') }}
+        </div>
+    @endif
+    @if($errors->has('sick_leave'))
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-600">
+            {{ $errors->first('sick_leave') }}
+        </div>
+    @endif
 
     <!-- Filter tanggal + ringkasan -->
     <div class="flex flex-wrap items-stretch gap-3">
@@ -53,6 +63,7 @@
                     $overtime = $att->overtime_1x + $att->overtime_2x;
                     $outside  = ($att->location_status ?? 'Terverifikasi') === 'Luar Radius';
                     $isSickLeave = $att->attendance_status === 'izin_sakit';
+                    $isRejected = $att->attendance_status === 'alpa';
                 @endphp
                 <tr class="hover:bg-[#fcfbf9] transition">
                     <td class="px-4 py-3">
@@ -68,10 +79,28 @@
                         {{ $overtime > 0 ? rtrim(rtrim(number_format($overtime, 2, ',', '.'), '0'), ',') . ' jam' : '-' }}
                     </td>
                     <td class="px-4 py-3">
-                        @if($isSickLeave)
-                            <span class="inline-flex rounded-full bg-[#fff4e8] px-2 py-1 text-[9px] font-semibold text-[#c28455]">Izin sakit</span>
+                        @if($isSickLeave || $isRejected)
+                            <span class="inline-flex rounded-full {{ $isRejected ? 'bg-red-50 text-red-500' : 'bg-[#fff4e8] text-[#c28455]' }} px-2 py-1 text-[9px] font-semibold">
+                                {{ $isRejected ? 'Alpa / Tanpa Keterangan' : 'Izin sakit' }}
+                            </span>
                             @if($att->sick_leave_proof)
                                 <a href="{{ asset('storage/' . $att->sick_leave_proof) }}" target="_blank" class="block mt-1 text-blue-600 hover:underline">Lihat bukti</a>
+                            @endif
+                            @if($isSickLeave && $att->sick_leave_status === 'pending')
+                                <div class="flex gap-1 mt-2">
+                                    <form method="POST" action="{{ route('owner.attendances.approve_sick_leave', $att) }}">
+                                        @csrf
+                                        <button type="submit" class="rounded bg-[#348b66] px-2 py-1 text-[9px] font-semibold text-white hover:bg-[#287252]">Approve</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('owner.attendances.reject_sick_leave', $att) }}">
+                                        @csrf
+                                        <button type="submit" class="rounded bg-red-500 px-2 py-1 text-[9px] font-semibold text-white hover:bg-red-600">Reject</button>
+                                    </form>
+                                </div>
+                            @elseif($isSickLeave)
+                                <span class="block mt-1 text-[9px] text-gray-400">
+                                    {{ $att->sick_leave_status === 'approved' ? 'Disetujui' : 'Ditolak' }}
+                                </span>
                             @endif
                         @elseif($outside)
                             <span class="inline-flex rounded-full bg-red-50 px-2 py-1 text-[9px] font-semibold text-red-500">✗ Luar Radius</span>
@@ -80,9 +109,11 @@
                         @endif
                     </td>
                     <td class="px-4 py-3">
-                        @if($outside)
+                        @if($isRejected || $outside || $isSickLeave)
                             <p class="text-gray-400">Rp0</p>
-                            <p class="text-[9px] text-red-500">Ditolak lokasi</p>
+                            <p class="text-[9px] {{ $isRejected ? 'text-red-500' : 'text-gray-400' }}">
+                                {{ $isRejected ? 'Alpa / Tanpa Keterangan' : ($isSickLeave ? 'Tidak ada gaji' : 'Ditolak lokasi') }}
+                            </p>
                         @else
                             <p class="text-gray-800 font-semibold">Rp{{ number_format($att->daily_wage, 0, ',', '.') }}</p>
                             <p class="text-[9px] text-gray-400">Gaji hari ini</p>

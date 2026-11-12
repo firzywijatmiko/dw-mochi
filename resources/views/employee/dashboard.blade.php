@@ -59,10 +59,14 @@
 
                 <!-- Logika Tombol Check-In / Check-Out -->
                 @if($attendanceToday)
-                    @if($attendanceToday->attendance_status === 'izin_sakit')
+                    @if($attendanceToday->attendance_status !== 'hadir')
                         <div class="bg-[#fff4e8] border border-[#f5e3d3] p-3 rounded-xl text-sm">
-                            <p class="font-bold text-[#c28455]">Izin sakit tercatat</p>
-                            <p class="text-xs text-gray-500 mt-1">Bukti foto sudah dikirim.</p>
+                            <p class="font-bold {{ $attendanceToday->attendance_status === 'alpa' ? 'text-red-500' : 'text-[#c28455]' }}">
+                                {{ $attendanceToday->attendance_status === 'alpa' ? 'Alpa / Tanpa Keterangan' : 'Izin sakit ' . ($attendanceToday->sick_leave_status === 'approved' ? 'disetujui' : 'menunggu persetujuan') }}
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {{ $attendanceToday->attendance_status === 'alpa' ? 'Pengajuan izin ditolak oleh Owner.' : 'Bukti foto sudah dikirim.' }}
+                            </p>
                         </div>
                     @else
                     <div class="flex items-center justify-between bg-[#eef5fc] border border-[#d1e3f8] p-3 rounded-xl mb-4">

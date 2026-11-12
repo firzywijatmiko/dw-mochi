@@ -39,6 +39,8 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/attendances/recap', [\App\Http\Controllers\AttendanceController::class, 'recap'])->name('attendances.recap');
+        Route::post('/attendances/{attendance}/approve-sick-leave', [\App\Http\Controllers\AttendanceController::class, 'approveSickLeave'])->name('attendances.approve_sick_leave');
+        Route::post('/attendances/{attendance}/reject-sick-leave', [\App\Http\Controllers\AttendanceController::class, 'rejectSickLeave'])->name('attendances.reject_sick_leave');
         Route::get('/payrolls', [\App\Http\Controllers\PayrollController::class, 'index'])->name('payrolls.index');
         Route::put('/payrolls/{payroll}/status', [\App\Http\Controllers\PayrollController::class, 'updateStatus'])->name('payrolls.status');
         

@@ -10,7 +10,7 @@ class Attendance extends Model
     use HasFactory;
 
     protected $fillable = [
-        'employees_id', 'date', 'attendance_status', 'sick_leave_proof', 'check_in_at', 'check_out_at',
+        'employees_id', 'date', 'attendance_status', 'sick_leave_proof', 'sick_leave_status', 'check_in_at', 'check_out_at',
         'check_in_lat', 'check_in_lng', 'check_out_lat', 'check_out_lng',
         'regular_hours', 'overtime_1x', 'overtime_2x', 'daily_wage', 'notes'
     ];

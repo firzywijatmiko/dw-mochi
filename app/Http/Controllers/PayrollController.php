@@ -67,18 +67,19 @@ class PayrollController extends Controller
     {
         $request->validate(['status' => 'required|in:Belum Dibayar,Dibayar']);
 
-        if ($request->status === $payroll->status) {
-            return back();
+        // Kunci permanen: gaji yang sudah dibayar tidak bisa dikembalikan
+        if ($payroll->status === 'Dibayar') {
+            return back()->withErrors([
+                'status' => 'Gaji yang sudah dibayar terkunci dan tidak dapat dikembalikan ke Belum Dibayar.',
+            ]);
         }
 
         if ($request->status === 'Dibayar') {
             $this->recordService->markAsPaid($payroll);
-            $message = 'Gaji ' . ($payroll->employee->name ?? '') . ' ditandai sudah dibayar.';
-        } else {
-            $this->recordService->unlock($payroll);
-            $message = 'Status gaji ' . ($payroll->employee->name ?? '') . ' dikembalikan ke belum dibayar dan dihitung ulang dari presensi.';
+
+            return back()->with('success', 'Gaji ' . ($payroll->employee->name ?? '') . ' ditandai sudah dibayar dan slip dibuat.');
         }
 
-        return back()->with('success', $message);
+        return back();
     }
 }

@@ -22,4 +22,7 @@ return [
     // Aturan gaji per jam (hasil konfirmasi ibu)
     'min_minutes'           => 60, // di bawah ini gaji = 0 (dicek sebelum pembulatan)
     'round_up_from_minutes' => 30, // sisa menit >= 30 dibulatkan naik
+
+    // Uang sakit per pengajuan izin sakit yang di-ACC owner (asumsi, konfirmasi ke ibu)
+    'sick_allowance' => 100000,
 ];

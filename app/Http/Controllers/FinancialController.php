@@ -169,9 +169,14 @@ class FinancialController extends Controller
 
         $validated = $request->validate([
             'item_name'    => 'required|string|max:255',
-            'amount'       => 'required|numeric|min:0',
+            'amount'       => 'required|integer|min:1|max:100000000',
             'expense_date' => 'required|date',
             'notes'        => 'nullable|string',
+        ], [
+            'amount.required' => 'Nominal wajib diisi.',
+            'amount.integer'  => 'Nominal harus berupa bilangan bulat.',
+            'amount.min'      => 'Nominal minimal Rp 1.',
+            'amount.max'      => 'Nominal maksimal Rp 100.000.000.',
         ]);
 
         DB::table('raw_material_expenses')->insert([
@@ -194,9 +199,14 @@ class FinancialController extends Controller
 
         $validated = $request->validate([
             'item_name'    => 'required|string|max:255',
-            'amount'       => 'required|numeric|min:0',
+            'amount'       => 'required|integer|min:1|max:100000000',
             'expense_date' => 'required|date',
             'notes'        => 'nullable|string',
+        ], [
+            'amount.required' => 'Nominal wajib diisi.',
+            'amount.integer'  => 'Nominal harus berupa bilangan bulat.',
+            'amount.min'      => 'Nominal minimal Rp 1.',
+            'amount.max'      => 'Nominal maksimal Rp 100.000.000.',
         ]);
 
         DB::table('raw_material_expenses')->where('id', $id)->update([

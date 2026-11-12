@@ -18,4 +18,8 @@ return [
 
     // Periode gaji mingguan: Senin - Sabtu (dibayar hari Sabtu)
     'week_start_day'     => 1,
+
+    // Aturan gaji per jam (hasil konfirmasi ibu)
+    'min_minutes'           => 60, // di bawah ini gaji = 0 (dicek sebelum pembulatan)
+    'round_up_from_minutes' => 30, // sisa menit >= 30 dibulatkan naik
 ];

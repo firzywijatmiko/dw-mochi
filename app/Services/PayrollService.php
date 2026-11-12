@@ -26,9 +26,22 @@ class PayrollService
             return $zero;
         }
 
-        $cfg = config('payroll');
-        $workedHours = $checkIn->diffInSeconds($checkOut) / 3600;
-        $regular = min($workedHours, $cfg['regular_hours']);
+                $cfg = config('payroll');
+
+        // Hitung dalam menit bulat supaya tidak ada galat pecahan
+        $minutes = $checkIn->diffInMinutes($checkOut);
+
+        // Minimal 1 jam kerja, dicek pada durasi aktual sebelum pembulatan
+        if ($minutes < $cfg['min_minutes']) {
+            $zero['worked_hours'] = round($minutes / 60, 2);
+            return $zero;
+        }
+
+        // Pembulatan: sisa menit >= 30 naik, di bawah itu turun
+        $workedHours = intdiv($minutes, 60)
+            + (($minutes % 60) >= $cfg['round_up_from_minutes'] ? 1 : 0);
+
+        $regular  = min($workedHours, $cfg['regular_hours']);
         $overtime = max($workedHours - $cfg['regular_hours'], 0);
 
         // Jam lembur tetap bertingkat seperti kebijakan yang sudah ada:
@@ -90,9 +103,10 @@ class PayrollService
             ->whereNotNull('check_in_at')
             ->get();
 
-        $meal = $rows->where('daily_wage', '>', 0)->count() * config('payroll.meal_allowance');
-        $base = $rows->where('daily_wage', '>', 0)->count() * $employee->base_daily_wage;
-        $total = $rows->sum('daily_wage');
+                $hourly = $employee->base_daily_wage / config('payroll.regular_hours');
+        $meal   = $rows->where('daily_wage', '>', 0)->count() * config('payroll.meal_allowance');
+        $base   = round($rows->sum('regular_hours') * $hourly, 2);
+        $total  = $rows->sum('daily_wage');
 
         return [
             'employee'       => $employee,

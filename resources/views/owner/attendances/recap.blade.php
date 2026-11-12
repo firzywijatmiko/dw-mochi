@@ -17,12 +17,35 @@
         </div>
     @endif
 
-    <!-- Filter tanggal + ringkasan -->
+    <!-- Filter rentang tanggal dan karyawan + ringkasan -->
     <div class="flex flex-wrap items-stretch gap-3">
         <form method="GET" action="{{ route('owner.attendances.recap') }}" class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] px-4 py-3">
-            <label class="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Filter Tanggal</label>
-            <input type="date" name="date" value="{{ $date->toDateString() }}" onchange="this.form.submit()"
-                   class="px-3 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Dari tanggal</label>
+                    <input type="date" name="start_date" value="{{ $startDate->toDateString() }}"
+                           class="px-3 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Sampai tanggal</label>
+                    <input type="date" name="end_date" value="{{ $endDate->toDateString() }}"
+                           class="px-3 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Karyawan</label>
+                    <select name="employee_id" class="px-3 py-1.5 border border-gray-200 rounded-md text-xs focus:ring-1 focus:ring-[#0f2137] outline-none">
+                        <option value="">Semua karyawan</option>
+                        @foreach($employees as $employee)
+                            <option value="{{ $employee->id }}" {{ (string) request('employee_id') === (string) $employee->id ? 'selected' : '' }}>
+                                {{ $employee->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="submit" class="rounded-md bg-[#0f2137] px-4 py-2 text-xs font-semibold text-white hover:bg-[#183252]">
+                    Tampilkan
+                </button>
+            </div>
         </form>
 
         <div class="flex flex-wrap gap-3">
@@ -31,12 +54,12 @@
                 <p class="text-[10px] text-gray-500">Hadir</p>
             </div>
             <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] px-5 py-3 text-center min-w-[96px] flex-1">
-                <p class="text-xl font-bold text-gray-800">{{ $summary['absent'] }}</p>
-                <p class="text-[10px] text-gray-500">Tidak Hadir</p>
+                <p class="text-xl font-bold text-[#c28455]">{{ $summary['sick_leave'] }}</p>
+                <p class="text-[10px] text-gray-500">Izin Sakit</p>
             </div>
-            <div class="rounded-lg shadow-sm border px-5 py-3 text-center min-w-[96px] flex-1 {{ $summary['outside'] > 0 ? 'bg-red-50 border-red-100' : 'bg-white border-[#e7e0d8]' }}">
-                <p class="text-xl font-bold {{ $summary['outside'] > 0 ? 'text-red-500' : 'text-gray-800' }}">{{ $summary['outside'] }}</p>
-                <p class="text-[10px] {{ $summary['outside'] > 0 ? 'text-red-500' : 'text-gray-500' }}">Lokasi ✗</p>
+            <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] px-5 py-3 text-center min-w-[96px] flex-1">
+                <p class="text-xl font-bold text-red-500">{{ $summary['absent'] }}</p>
+                <p class="text-[10px] text-gray-500">Alpa</p>
             </div>
         </div>
     </div>
@@ -46,6 +69,7 @@
         <table class="min-w-[700px] w-full text-left text-[10px]">
             <thead class="bg-[#faf9f7] uppercase text-[9px] tracking-wide text-gray-400">
                 <tr>
+                    <th class="px-4 py-3">Tanggal</th>
                     <th class="px-4 py-3">Nama Karyawan</th>
                     <th class="px-4 py-3">Jam Masuk</th>
                     <th class="px-4 py-3">Jam Pulang</th>
@@ -66,6 +90,7 @@
                     $isRejected = $att->attendance_status === 'alpa';
                 @endphp
                 <tr class="hover:bg-[#fcfbf9] transition">
+                    <td class="px-4 py-3">{{ $att->date->format('d/m/Y') }}</td>
                     <td class="px-4 py-3">
                         <div class="flex items-center gap-2.5">
                             <span class="w-6 h-6 rounded-md bg-gray-100 text-gray-600 text-[9px] font-semibold flex items-center justify-center">{{ $initials }}</span>
@@ -122,7 +147,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data presensi pada tanggal ini.</td>
+                    <td colspan="8" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data presensi pada rentang tanggal ini.</td>
                 </tr>
                 @endforelse
             </tbody>

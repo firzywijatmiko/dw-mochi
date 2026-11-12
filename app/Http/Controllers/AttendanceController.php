@@ -180,22 +180,46 @@ class AttendanceController extends Controller
      */
     public function recap(Request $request)
     {
-        $date = $request->filled('date') ? Carbon::parse($request->date) : Carbon::today();
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'employee_id' => 'nullable|integer|exists:employees,id',
+        ]);
 
-        $attendances = Attendance::with('employee')
-            ->whereDate('date', $date->toDateString())
+        $startDate = $request->filled('start_date')
+            ? Carbon::parse($request->start_date)->startOfDay()
+            : Carbon::today()->startOfDay();
+        $endDate = $request->filled('end_date')
+            ? Carbon::parse($request->end_date)->endOfDay()
+            : $startDate->copy()->endOfDay();
+
+        $attendancesQuery = Attendance::with('employee')
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
+
+        if ($request->filled('employee_id')) {
+            $attendancesQuery->where('employees_id', $request->employee_id);
+        }
+
+        $attendances = $attendancesQuery
+            ->orderBy('date', 'desc')
             ->orderBy('check_in_at')
             ->get();
 
-        $totalEmployees = Employee::where('status', 'Aktif')->count();
-        $present = $attendances->whereNotNull('check_in_at')->count();
-
         $summary = [
-            'present' => $present,
-            'absent'  => max($totalEmployees - $present, 0),
+            'present' => $attendances->where('attendance_status', 'hadir')->whereNotNull('check_in_at')->count(),
+            'sick_leave' => $attendances->where('attendance_status', 'izin_sakit')->count(),
+            'absent' => $attendances->where('attendance_status', 'alpa')->count(),
             'outside' => $attendances->where('location_status', 'Luar Radius')->count(),
         ];
 
-        return view('owner.attendances.recap', compact('date', 'attendances', 'summary'));
+        $employees = Employee::orderBy('name')->get();
+
+        return view('owner.attendances.recap', compact(
+            'startDate',
+            'endDate',
+            'attendances',
+            'summary',
+            'employees'
+        ));
     }
 }

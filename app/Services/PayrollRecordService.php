@@ -5,6 +5,9 @@ namespace App\Services;
 use App\Models\Attendance;
 use App\Models\Payroll;
 use Carbon\Carbon;
+use App\Models\Payslip;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Menyimpan hasil perhitungan gaji per periode ke tabel payrolls (F12 - Riwayat Penggajian).
@@ -31,7 +34,7 @@ class PayrollRecordService
         $skippedPaid = 0;
 
         foreach ($summary['rows'] as $row) {
-            if ($row['days_present'] <= 0) {
+            if ($row['days_present'] <= 0 && $row['sick_pay'] <= 0) {
                 continue;
             }
 
@@ -51,6 +54,7 @@ class PayrollRecordService
                 'base_pay'     => $row['base_pay'],
                 'meal_pay'     => $row['meal_pay'],
                 'overtime_pay' => $row['overtime_pay'],
+                'sick_pay'     => $row['sick_pay'],
                 'total_pay'    => $row['total'],
             ])->save();
 
@@ -88,28 +92,40 @@ class PayrollRecordService
         }
     }
 
-    public function markAsPaid(Payroll $record): Payroll
+        public function markAsPaid(Payroll $record): Payroll
     {
-        $record->update([
-            'status'  => 'Dibayar',
-            'paid_at' => Carbon::now(),
-        ]);
+        return DB::transaction(function () use ($record) {
+            $record = Payroll::lockForUpdate()->findOrFail($record->id);
 
-        return $record;
-    }
+            if ($record->status === 'Dibayar') {
+                return $record;
+            }
 
-    /**
-     * Buka kunci gaji yang sudah Dibayar (misalnya ada presensi susulan),
-     * supaya bisa dihitung ulang. Status kembali ke Belum Dibayar.
-     */
-    public function unlock(Payroll $record): Payroll
-    {
-        $record->update([
-            'status'  => 'Belum Dibayar',
-            'paid_at' => null,
-        ]);
+            $record->update([
+                'status'  => 'Dibayar',
+                'paid_at' => Carbon::now(),
+                'paid_by' => Auth::id(),
+            ]);
 
-        return $record;
+            // Arsip slip: snapshot nilai saat dibayar
+            Payslip::updateOrCreate(
+                ['payroll_id' => $record->id],
+                [
+                    'employees_id' => $record->employees_id,
+                    'period_start' => $record->period_start,
+                    'period_end'   => $record->period_end,
+                    'days_present' => $record->days_present,
+                    'base_pay'     => $record->base_pay,
+                    'meal_pay'     => $record->meal_pay,
+                    'overtime_pay' => $record->overtime_pay,
+                    'sick_pay'     => $record->sick_pay,
+                    'total_pay'    => $record->total_pay,
+                    'paid_at'      => $record->paid_at,
+                ]
+            );
+
+            return $record;
+        });
     }
 
     /**

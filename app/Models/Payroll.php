@@ -11,7 +11,8 @@ class Payroll extends Model
 
     protected $fillable = [
         'employees_id', 'period_start', 'period_end', 'days_present',
-        'base_pay', 'meal_pay', 'overtime_pay', 'total_pay', 'status', 'paid_at',
+        'base_pay', 'meal_pay', 'overtime_pay', 'sick_pay', 'total_pay',
+        'status', 'paid_at', 'paid_by',
     ];
 
     protected $casts = [
@@ -22,6 +23,7 @@ class Payroll extends Model
         'meal_pay'     => 'float',
         'overtime_pay' => 'float',
         'total_pay'    => 'float',
+        'sick_pay'     => 'float',
     ];
 
     public function employee()

@@ -10,7 +10,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
-        'customer_name', 'customer_phone', 'pickup_at', 'status', 'notes', 'raw_template', 'created_by'
+        'customer_name', 'customer_phone', 'pickup_at', 'status', 'notes', 'raw_template', 'created_by', 'is_label_printed'
     ];
 
     public function details()

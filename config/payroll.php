@@ -2,10 +2,10 @@
 
 // Aturan penggajian DW Mochi (sumber: laporan capstone, subbab 2.1.2)
 return [
-    // Jam kerja reguler 08.00 - 15.00 = 7 jam
+    // Jam kerja normal adalah 8 jam per hari.
     'work_start'         => '08:00',
-    'work_end'           => '15:00',
-    'regular_hours'      => 7,
+    'work_end'           => '16:00',
+    'regular_hours'      => 8,
 
     // Lembur tier 1 (kolom overtime_1x): 16.00-18.00, upah 2x tarif per jam
     'overtime_1x' => ['start' => '16:00', 'end' => '18:00', 'multiplier' => 2],
@@ -18,4 +18,11 @@ return [
 
     // Periode gaji mingguan: Senin - Sabtu (dibayar hari Sabtu)
     'week_start_day'     => 1,
+
+    // Aturan gaji per jam (hasil konfirmasi ibu)
+    'min_minutes'           => 60, // di bawah ini gaji = 0 (dicek sebelum pembulatan)
+    'round_up_from_minutes' => 30, // sisa menit >= 30 dibulatkan naik
+
+    // Uang sakit per pengajuan izin sakit yang di-ACC owner (asumsi, konfirmasi ke ibu)
+    'sick_allowance' => 100000,
 ];

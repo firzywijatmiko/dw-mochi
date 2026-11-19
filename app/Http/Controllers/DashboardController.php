@@ -17,45 +17,55 @@ class DashboardController extends Controller
     public function index()
     {
         $today = Carbon::today()->toDateString();
-        $weekStart = Carbon::now()->startOfWeek();
-        $weekEnd = Carbon::now()->endOfWeek();
+        $weekStart = Carbon::now()->startOfWeek()->startOfDay();
+        $weekEnd = Carbon::now()->endOfWeek()->endOfDay();
 
-        // 1. Ambil Data Pesanan
+        // 1. Ambil Data Pesanan (sesuai OrderController: pending, process, completed, cancelled)
         $activeOrders = Order::whereIn('status', ['pending', 'process'])->count();
-        $completedToday = Order::where('status', 'completed')->whereDate('updated_at', $today)->count();
 
-        // 2. Ambil Data Keuangan
+        $completedToday = Order::where('status', 'completed')
+            ->whereDate('updated_at', $today)
+            ->count();
+
+        // 2. Ambil Data Keuangan (sesuai OrderDetail: unit_price)
         $todayRevenue = OrderDetail::whereHas('order', function ($query) use ($today) {
             $query->where('status', 'completed')
                   ->whereDate('updated_at', $today);
         })->get()->sum(function ($detail) {
-            // PERBAIKAN: Tambahkan operator perkalian (*) di sini
-            return $detail->quantity * $detail->unit_price; 
+            return $detail->quantity * $detail->unit_price;
         });
 
         $todayExpense = RawMaterialExpense::whereDate('expense_date', $today)->sum('amount');
 
-        // 3. Ambil Data Presensi
-        $presentEmployees = Attendance::where('date', $today)->whereNotNull('check_in_at')->count();
+        // 3. Ambil Data Presensi Hari Ini
+        $presentEmployees = Attendance::whereDate('date', $today)
+            ->whereNotNull('check_in_at')
+            ->count();
 
-        // Data Mingguan
-        $weeklyOrders = Order::whereBetween('created_at', [$weekStart, $weekEnd])->count();
+        // 4. Data Mingguan
+        $weeklyOrders = Order::where('status', '!=', 'cancelled')
+            ->whereBetween('created_at', [$weekStart, $weekEnd])
+            ->count();
+
         $weeklyRevenue = OrderDetail::whereHas('order', function ($query) use ($weekStart, $weekEnd) {
             $query->where('status', 'completed')
                   ->whereBetween('updated_at', [$weekStart, $weekEnd]);
         })->get()->sum(function ($detail) {
-            // PERBAIKAN: Tambahkan operator perkalian (*) di sini
-            return $detail->quantity * $detail->unit_price; 
+            return $detail->quantity * $detail->unit_price;
         });
 
-        $recentOrders = Order::with('details')
+        // 5. Daftar Pesanan Hari Ini & Mendatang
+        $recentOrders = Order::with('details.productVariant')
             ->whereIn('status', ['pending', 'process'])
-            ->whereDate('pickup_at', '>=', $today)
-            ->orderBy('pickup_at')
-            ->limit(5)
+            ->where(function ($query) use ($today) {
+                $query->whereDate('pickup_at', '>=', $today)
+                      ->orWhereNull('pickup_at');
+            })
+            ->orderByRaw('pickup_at IS NULL, pickup_at ASC')
+            ->limit(10)
             ->get();
 
-        // 4. Susun Data Statistik
+        // 6. Susun Data Statistik
         $statistics = [
             'active_orders'     => $activeOrders,
             'completed_today'   => $completedToday,
@@ -66,18 +76,14 @@ class DashboardController extends Controller
             'weekly_revenue'    => $weeklyRevenue,
         ];
 
-        // 5. Tampilkan Halaman Dashboard
         return view('owner.dashboard', compact('statistics', 'recentOrders'));
     }
 
     public function employeeDashboard()
     {
-        // Ambil data karyawan yang sedang login
         $employee = Auth::user()->employee;
 
-        // CEK JIKA KARYAWAN BELUM TERHUBUNG
         if (!$employee) {
-            // Logout atau berikan pesan error yang jelas
             Auth::logout();
             return redirect('/login')->withErrors([
                 'username' => 'Akun Anda belum terdaftar sebagai data karyawan. Silakan hubungi Owner.'
@@ -85,19 +91,14 @@ class DashboardController extends Controller
         }
 
         $today = Carbon::today()->toDateString();
-        
-        // Cek status presensi hari ini
+
         $attendanceToday = Attendance::where('employees_id', $employee->id)
-                                     ->where('date', $today)
-                                     ->first();
+            ->whereDate('date', $today)
+            ->first();
 
-        // ==========================================
-        // LOGIKA BARU UNTUK RIWAYAT DAN GAJI
-        // ==========================================
-        $startOfWeek = Carbon::now()->startOfWeek();
-        $endOfWeek = Carbon::now()->endOfWeek();
+        $startOfWeek = Carbon::now()->startOfWeek()->startOfDay();
+        $endOfWeek = Carbon::now()->endOfWeek()->endOfDay();
 
-        // 1. Ambil data absensi khusus minggu ini untuk menghitung ringkasan
         $weeklyAttendances = Attendance::where('employees_id', $employee->id)
             ->whereBetween('date', [$startOfWeek, $endOfWeek])
             ->get();
@@ -108,12 +109,10 @@ class DashboardController extends Controller
             return $att->overtime_1x + $att->overtime_2x;
         });
 
-        // 2. Ambil riwayat absensi keseluruhan dengan Pagination (10 data per halaman)
         $paginatedAttendances = Attendance::where('employees_id', $employee->id)
             ->orderBy('date', 'desc')
             ->paginate(10);
 
-        // 3. Susun data dalam bentuk array agar sesuai dengan panggilan di View
         $salaryData = [
             'total_gaji'      => $totalGaji,
             'total_kehadiran' => $totalKehadiran,
@@ -121,8 +120,6 @@ class DashboardController extends Controller
             'attendances'     => $paginatedAttendances
         ];
 
-        // Mengarahkan ke folder resources/views/employee/dashboard.blade.php
-        // Jangan lupa sertakan 'salaryData' di dalam compact()
         return view('employee.dashboard', compact('employee', 'attendanceToday', 'salaryData'));
     }
 }

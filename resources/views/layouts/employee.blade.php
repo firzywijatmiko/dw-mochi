@@ -19,21 +19,6 @@
 
     <div class="w-full min-h-screen flex flex-col relative">
 
-        <!-- MENU SLIP GAJI -->
-        <div class="w-full px-4 py-3 bg-white border-b border-gray-200">
-            <a href="{{ route('employee.payslips') }}"
-               class="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 transition">
-
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z">
-                    </path>
-                </svg>
-
-                Slip Gaji
-            </a>
-        </div>
-
         @yield('content')
 
     </div>

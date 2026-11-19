@@ -10,19 +10,25 @@ class ProductVariantController extends Controller
 {
     protected $variantService;
 
-    // Menyuntikkan ProductVariantService melalui constructor
     public function __construct(ProductVariantService $variantService)
     {
         $this->variantService = $variantService;
     }
 
     /**
-     * Menampilkan daftar semua product variant.
+     * Menampilkan daftar semua product variant dengan pagination.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $variants = $this->variantService->getAllVariants();
-        return view('owner.product_variants.index', compact('variants')); // Baris ini mencari file di folder product_variants
+        $perPage = in_array((int) $request->input('per_page'), [5, 10, 25, 50])
+            ? (int) $request->input('per_page')
+            : 10;
+
+        $variants = ProductVariant::orderBy('name', 'asc')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('owner.product_variants.index', compact('variants', 'perPage'));
     }
 
     public function store(Request $request)
@@ -42,7 +48,6 @@ class ProductVariantController extends Controller
     public function update(Request $request, ProductVariant $productVariant)
     {
         $validatedData = $request->validate([
-            // Abaikan nama yang sama jika ID-nya milik produk ini sendiri
             'name'      => 'required|string|max:255|unique:product_variants,name,' . $productVariant->id,
             'price'     => 'required|numeric|min:1000',
             'is_active' => 'required|boolean',
@@ -59,13 +64,11 @@ class ProductVariantController extends Controller
      */
     public function destroy(ProductVariant $productVariant)
     {
-        // Varian yang sudah dipakai pada pesanan tidak boleh dihapus
         if (\App\Models\OrderDetail::where('product_variant_id', $productVariant->id)->exists()) {
             return redirect()->route('owner.product_variants.index')
                 ->withErrors(['variant' => 'Varian "' . $productVariant->name . '" tidak bisa dihapus karena sudah dipakai pada pesanan.']);
         }
 
-        // Memanggil service untuk menghapus data
         $this->variantService->deleteVariant($productVariant);
 
         return redirect()->route('owner.product_variants.index')

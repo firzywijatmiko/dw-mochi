@@ -3,9 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\ProductVariantController;
-
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ReportController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -54,12 +54,17 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('employees', \App\Http\Controllers\EmployeeController::class)->except(['create', 'edit', 'show']);
         
         Route::resource('product_variants', ProductVariantController::class)->except(['create', 'edit', 'show']);
+        // Di dalam group middleware owner (prefix 'owner', name 'owner.')
+        Route::prefix('pengeluaran')->name('expenses.')->group(function () {
+            Route::get('/', [ExpenseController::class, 'index'])->name('index');
+            Route::post('/', [ExpenseController::class, 'store'])->name('store');
+            Route::put('/{id}', [ExpenseController::class, 'update'])->name('update');
+            Route::delete('/{id}', [ExpenseController::class, 'destroy'])->name('destroy');
+        });
 
-        // Rute Keuangan & Laporan Gabungan
-        Route::get('/keuangan', [FinancialController::class, 'index'])->name('financial.index');
-        Route::post('/keuangan/store', [FinancialController::class, 'store'])->name('financial.store');
-        Route::put('/keuangan/update/{id}', [FinancialController::class, 'update'])->name('financial.update');
-        Route::delete('/keuangan/delete/{id}', [FinancialController::class, 'destroy'])->name('financial.destroy');
+        Route::prefix('laporan')->name('reports.')->group(function () {
+            Route::get('/', [ReportController::class, 'index'])->name('index');
+        });
     });
 
     // --- GRUP KARYAWAN ---

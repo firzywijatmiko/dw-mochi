@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Laporan Keuangan DW Mochi</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #222; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #222; margin: 0; padding: 20px; }
         h1 { font-size: 16px; margin: 0; color: #0f2137; }
         .sub { color: #666; margin: 2px 0 14px; }
         table { width: 100%; border-collapse: collapse; margin-top: 8px; }
@@ -14,6 +14,7 @@
         .summary td:first-child { width: 55%; }
         .profit { font-weight: bold; }
         .footer { margin-top: 14px; font-size: 9px; color: #888; }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
@@ -42,11 +43,11 @@
         <thead>
             <tr>
                 <th>Tanggal</th>
-                <th>Pesanan</th>
-                <th>Pendapatan</th>
-                <th>Bahan Baku</th>
-                <th>Gaji</th>
-                <th>Laba</th>
+                <th class="right">Pesanan</th>
+                <th class="right">Pendapatan</th>
+                <th class="right">Bahan Baku</th>
+                <th class="right">Gaji</th>
+                <th class="right">Laba</th>
             </tr>
         </thead>
         <tbody>
@@ -75,11 +76,11 @@
             <tr>
                 <th>Tanggal</th>
                 <th>Nama Item / Keterangan</th>
-                <th>Nominal</th>
+                <th class="right">Nominal</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($mergedExpenses as $item)
+            @forelse($mergedExpenses ?? [] as $item)
             <tr>
                 <td>{{ \Carbon\Carbon::parse($item->expense_date)->format('d/m/Y') }}</td>
                 <td>

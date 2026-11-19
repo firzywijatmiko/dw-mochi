@@ -17,13 +17,13 @@
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
             <div class="flex items-start justify-between">
-                <p class="text-[10px] font-semibold text-gray-500">Pesanan Aktif Hari Ini</p>
+                <p class="text-[10px] font-semibold text-gray-500">Pesanan Aktif</p>
                 <span class="rounded-md bg-[#fff4e8] p-1.5 text-[#c28455]">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
             </div>
-            <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['active_orders'] }}</p>
-            <p class="mt-1 text-[10px] text-gray-400">pesanan sedang berjalan</p>
+            <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['active_orders'] ?? 0 }}</p>
+            <p class="mt-1 text-[10px] text-gray-400">menunggu &amp; sedang diproses</p>
         </div>
 
         <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
@@ -33,8 +33,8 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.8" d="M5 13l4 4L19 7"/></svg>
                 </span>
             </div>
-            <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['completed_today'] }}</p>
-            <p class="mt-1 text-[10px] text-gray-400">sudah diambil hari ini</p>
+            <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['completed_today'] ?? 0 }}</p>
+            <p class="mt-1 text-[10px] text-gray-400">selesai hari ini</p>
         </div>
 
         <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
@@ -44,7 +44,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.8" d="M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8V7m0 1v8m9-4a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
             </div>
-            <p class="mt-3 text-xl font-bold text-[#0f2137]">Rp {{ number_format($statistics['weekly_revenue'], 0, ',', '.') }}</p>
+            <p class="mt-3 text-xl font-bold text-[#0f2137]">Rp {{ number_format($statistics['weekly_revenue'] ?? 0, 0, ',', '.') }}</p>
             <p class="mt-1 text-[10px] text-gray-400">dari pesanan selesai</p>
         </div>
 
@@ -55,7 +55,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.8" d="M7 4h10v16H7zM9 8h6M9 12h6M9 16h4"/></svg>
                 </span>
             </div>
-            <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['weekly_orders'] }}</p>
+            <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['weekly_orders'] ?? 0 }}</p>
             <p class="mt-1 text-[10px] text-gray-400">termasuk yang aktif</p>
         </div>
     </div>
@@ -85,16 +85,24 @@
                     @forelse ($recentOrders as $order)
                         @php
                             $quantity = $order->details->sum('quantity');
+                            $flavors = $order->details->map(fn($d) => optional($d->productVariant)->name)->filter()->implode(', ');
                             $status = [
                                 'pending' => ['Menunggu Produksi', 'bg-[#fff6d8] text-[#a17b1c]'],
                                 'process' => ['Sedang Diproses', 'bg-[#e5f0ff] text-[#3975b5]'],
-                            ][$order->status] ?? ['Tidak Diketahui', 'bg-gray-100 text-gray-500'];
+                            ][$order->status] ?? [ucfirst($order->status), 'bg-gray-100 text-gray-500'];
                         @endphp
                         <tr class="hover:bg-[#fcfbf9]">
                             <td class="px-4 py-3 font-semibold text-[#0f2137]">P-{{ str_pad($order->id, 3, '0', STR_PAD_LEFT) }}</td>
-                            <td class="px-4 py-3">{{ $order->customer_name }}</td>
+                            <td class="px-4 py-3">
+                                <div class="font-medium text-gray-800">{{ $order->customer_name }}</div>
+                                @if($flavors)
+                                    <div class="text-[9px] text-gray-400">{{ $flavors }}</div>
+                                @endif
+                            </td>
                             <td class="px-4 py-3">{{ $quantity }} pcs</td>
-                            <td class="px-4 py-3">{{ \Carbon\Carbon::parse($order->pickup_at)->format('d M Y') }}</td>
+                            <td class="px-4 py-3">
+                                {{ $order->pickup_at ? \Carbon\Carbon::parse($order->pickup_at)->format('d M Y, H:i') : 'Belum dijadwalkan' }}
+                            </td>
                             <td class="px-4 py-3"><span class="{{ $status[1] }} inline-flex rounded-full px-2 py-1 text-[9px] font-semibold">{{ $status[0] }}</span></td>
                         </tr>
                     @empty

@@ -16,10 +16,18 @@ class EmployeeController extends Controller
         $this->employeeService = $employeeService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $employees = Employee::with('user')->get();
-        return view('owner.employees.index', compact('employees'));
+        $perPage = in_array((int) $request->input('per_page'), [5, 10, 25, 50])
+            ? (int) $request->input('per_page')
+            : 10;
+
+        $employees = Employee::with('user')
+            ->orderBy('name', 'asc')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('owner.employees.index', compact('employees', 'perPage'));
     }
 
     public function store(Request $request)
@@ -44,7 +52,7 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'name'             => 'required|string|max:255',
             'username'         => 'required|string|max:255|unique:users,username,' . $employee->users_id,
-            'password'         => 'nullable|string|min:6', // Ubah jadi nullable agar tidak wajib isi saat update jika tidak mau ganti password
+            'password'         => 'nullable|string|min:6',
             'phone'            => 'required|string|unique:users,phone,' . $employee->users_id, 
             'base_daily_wage'  => 'required|numeric|min:0',
             'overtime_rate_1x' => 'nullable|numeric|min:0',
@@ -58,7 +66,6 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee)
     {
-        // Menghapus data karyawan (Otomatis menghapus akun User karena cascade)
         $employee->user()->delete(); 
         
         return redirect()->route('owner.employees.index')->with('success', 'Data Karyawan Berhasil Dihapus');

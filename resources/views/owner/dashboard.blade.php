@@ -14,7 +14,7 @@
         </span>
     </div>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
             <div class="flex items-start justify-between">
                 <p class="text-[10px] font-semibold text-gray-500">Pesanan Aktif</p>
@@ -35,6 +35,17 @@
             </div>
             <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['completed_today'] ?? 0 }}</p>
             <p class="mt-1 text-[10px] text-gray-400">selesai hari ini</p>
+        </div>
+
+        <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
+            <div class="flex items-start justify-between">
+                <p class="text-[10px] font-semibold text-gray-500">Karyawan Hadir</p>
+                <span class="rounded-md bg-[#eef5fc] p-1.5 text-[#4c83b5]">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m16-13a4 4 0 010 8m4 5v-2a4 4 0 00-3-3.87M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+                </span>
+            </div>
+            <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['present_employees'] ?? 0 }}</p>
+            <p class="mt-1 text-[10px] text-gray-400">sudah check-in hari ini</p>
         </div>
 
     </div>

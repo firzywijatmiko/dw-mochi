@@ -23,6 +23,11 @@ class DashboardController extends Controller
             ->whereDate('updated_at', $today)
             ->count();
 
+        $presentEmployees = Attendance::whereDate('date', $today)
+            ->whereNotNull('check_in_at')
+            ->distinct()
+            ->count('employees_id');
+
         // 2. Daftar seluruh pesanan aktif, termasuk yang sudah lewat jadwal ambil
         $recentOrders = Order::with('details.productVariant')
             ->whereIn('status', ['pending', 'process'])
@@ -34,6 +39,7 @@ class DashboardController extends Controller
         $statistics = [
             'active_orders'     => $activeOrders,
             'completed_today'   => $completedToday,
+            'present_employees' => $presentEmployees,
         ];
 
         return view('owner.dashboard', compact('statistics', 'recentOrders'));

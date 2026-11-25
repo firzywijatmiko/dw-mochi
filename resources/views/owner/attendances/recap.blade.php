@@ -20,6 +20,7 @@
     <!-- Filter rentang tanggal dan karyawan + ringkasan -->
     <div class="flex flex-wrap items-stretch gap-3">
         <form method="GET" action="{{ route('owner.attendances.recap') }}" class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] px-4 py-3">
+            @if(request('per_page')) <input type="hidden" name="per_page" value="{{ request('per_page') }}"> @endif
             <div class="flex flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Dari tanggal</label>
@@ -64,94 +65,182 @@
         </div>
     </div>
 
-    <!-- Tabel presensi -->
-    <div class="overflow-x-auto rounded-lg border border-[#e7e0d8] bg-white shadow-sm">
-        <table class="min-w-[700px] w-full text-left text-[10px]">
-            <thead class="bg-[#faf9f7] uppercase text-[9px] tracking-wide text-gray-400">
-                <tr>
-                    <th class="px-4 py-3">Tanggal</th>
-                    <th class="px-4 py-3">Nama Karyawan</th>
-                    <th class="px-4 py-3">Jam Masuk</th>
-                    <th class="px-4 py-3">Jam Pulang</th>
-                    <!-- <th class="px-4 py-3">Durasi Kerja</th> -->
-                    <th class="px-4 py-3">Jam Lembur</th>
-                    <th class="px-4 py-3">Status Lokasi</th>
-                    <th class="px-4 py-3">Gaji Harian</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-[#f1eeeb] text-gray-600">
-                @forelse($attendances as $att)
-                @php
-                    $name     = $att->employee->name ?? '-';
-                    $initials = collect(explode(' ', $name))->take(2)->map(function ($w) { return mb_strtoupper(mb_substr($w, 0, 1)); })->implode('');
-                    $overtime = $att->overtime_1x + $att->overtime_2x;
-                    $outside  = ($att->location_status ?? 'Terverifikasi') === 'Luar Radius';
-                    $isSickLeave = $att->attendance_status === 'izin_sakit';
-                    $isRejected = $att->attendance_status === 'alpa';
-                @endphp
-                <tr class="hover:bg-[#fcfbf9] transition">
-                    <td class="px-4 py-3">{{ $att->date->format('d/m/Y') }}</td>
-                    <td class="px-4 py-3">
-                        <div class="flex items-center gap-2.5">
-                            <span class="w-6 h-6 rounded-md bg-gray-100 text-gray-600 text-[9px] font-semibold flex items-center justify-center">{{ $initials }}</span>
-                            <span class="text-gray-800 font-medium">{{ $name }}</span>
-                        </div>
-                    </td>
-                    <td class="px-4 py-3">{{ $isSickLeave ? 'Izin sakit' : (optional($att->check_in_at)->format('H:i') ?? '-') }}</td>
-                    <td class="px-4 py-3">{{ optional($att->check_out_at)->format('H:i') ?? '-' }}</td>
-                    <td class="px-4 py-3">{{ $isSickLeave ? '-' : number_format($att->worked_hours ?? 0, 2, ',', '.') . ' jam' }}</td>
-                    <td class="px-4 py-3 text-gray-500">
-                        {{ $overtime > 0 ? rtrim(rtrim(number_format($overtime, 2, ',', '.'), '0'), ',') . ' jam' : '-' }}
-                    </td>
-                    <td class="px-4 py-3">
-                        @if($isSickLeave || $isRejected)
-                            <span class="inline-flex rounded-full {{ $isRejected ? 'bg-red-50 text-red-500' : 'bg-[#fff4e8] text-[#c28455]' }} px-2 py-1 text-[9px] font-semibold">
-                                {{ $isRejected ? 'Alpa / Tanpa Keterangan' : 'Izin sakit' }}
-                            </span>
-                            @if($att->sick_leave_proof)
-                                <a href="{{ asset('storage/' . $att->sick_leave_proof) }}" target="_blank" class="block mt-1 text-blue-600 hover:underline">Lihat bukti</a>
+    <!-- Card Gabungan Tabel Presensi & Pagination -->
+    <div class="overflow-hidden rounded-lg border border-[#e7e0d8] bg-white shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-[700px] w-full text-left text-[10px]">
+                <thead class="border-b border-[#e7e0d8] bg-[#faf9f7] uppercase text-[9px] tracking-wide text-gray-400">
+                    <tr>
+                        <th class="px-4 py-3">Tanggal</th>
+                        <th class="px-4 py-3">Nama Karyawan</th>
+                        <th class="px-4 py-3">Jam Masuk</th>
+                        <th class="px-4 py-3">Jam Pulang</th>
+                        <th class="px-4 py-3">Durasi Kerja</th>
+                        <th class="px-4 py-3">Jam Lembur</th>
+                        <th class="px-4 py-3">Status Lokasi</th>
+                        <th class="px-4 py-3">Gaji Harian</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#f1eeeb] text-gray-600">
+                    @forelse($attendances as $att)
+                    @php
+                        $name     = $att->employee->name ?? '-';
+                        $initials = collect(explode(' ', $name))->take(2)->map(function ($w) { return mb_strtoupper(mb_substr($w, 0, 1)); })->implode('');
+                        $overtime = $att->overtime_1x + $att->overtime_2x;
+                        $outside  = ($att->location_status ?? 'Terverifikasi') === 'Luar Radius';
+                        $isSickLeave = $att->attendance_status === 'izin_sakit';
+                        $isRejected = $att->attendance_status === 'alpa';
+                    @endphp
+                    <tr class="hover:bg-[#fcfbf9] transition">
+                        <td class="px-4 py-3">{{ $att->date->format('d/m/Y') }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="w-6 h-6 rounded-md bg-gray-100 text-gray-600 text-[9px] font-semibold flex items-center justify-center">{{ $initials }}</span>
+                                <span class="text-gray-800 font-medium">{{ $name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">{{ $isSickLeave ? 'Izin sakit' : (optional($att->check_in_at)->format('H:i') ?? '-') }}</td>
+                        <td class="px-4 py-3">{{ optional($att->check_out_at)->format('H:i') ?? '-' }}</td>
+                        <td class="px-4 py-3">{{ $isSickLeave ? '-' : number_format($att->worked_hours ?? 0, 2, ',', '.') . ' jam' }}</td>
+                        <td class="px-4 py-3 text-gray-500">
+                            {{ $overtime > 0 ? rtrim(rtrim(number_format($overtime, 2, ',', '.'), '0'), ',') . ' jam' : '-' }}
+                        </td>
+                        <td class="px-4 py-3">
+                            @if($isSickLeave || $isRejected)
+                                <span class="inline-flex rounded-full {{ $isRejected ? 'bg-red-50 text-red-500' : 'bg-[#fff4e8] text-[#c28455]' }} px-2 py-1 text-[9px] font-semibold">
+                                    {{ $isRejected ? 'Alpa / Tanpa Keterangan' : 'Izin sakit' }}
+                                </span>
+                                @if($att->sick_leave_proof)
+                                    <a href="{{ asset('storage/' . $att->sick_leave_proof) }}" target="_blank" class="block mt-1 text-blue-600 hover:underline">Lihat bukti</a>
+                                @endif
+                                @if($isSickLeave && $att->sick_leave_status === 'pending')
+                                    <div class="flex gap-1 mt-2">
+                                        <form method="POST" action="{{ route('owner.attendances.approve_sick_leave', $att) }}">
+                                            @csrf
+                                            <button type="submit" class="rounded bg-[#348b66] px-2 py-1 text-[9px] font-semibold text-white hover:bg-[#287252]">Approve</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('owner.attendances.reject_sick_leave', $att) }}">
+                                            @csrf
+                                            <button type="submit" class="rounded bg-red-500 px-2 py-1 text-[9px] font-semibold text-white hover:bg-red-600">Reject</button>
+                                        </form>
+                                    </div>
+                                @elseif($isSickLeave)
+                                    <span class="block mt-1 text-[9px] text-gray-400">
+                                        {{ $att->sick_leave_status === 'approved' ? 'Disetujui' : 'Ditolak' }}
+                                    </span>
+                                @endif
+                            @elseif($outside)
+                                <span class="inline-flex rounded-full bg-red-50 px-2 py-1 text-[9px] font-semibold text-red-500">✗ Luar Radius</span>
+                            @else
+                                <span class="inline-flex rounded-full bg-[#dff5e9] px-2 py-1 text-[9px] font-semibold text-[#348b66]">✓ Terverifikasi</span>
                             @endif
-                            @if($isSickLeave && $att->sick_leave_status === 'pending')
-                                <div class="flex gap-1 mt-2">
-                                    <form method="POST" action="{{ route('owner.attendances.approve_sick_leave', $att) }}">
-                                        @csrf
-                                        <button type="submit" class="rounded bg-[#348b66] px-2 py-1 text-[9px] font-semibold text-white hover:bg-[#287252]">Approve</button>
-                                    </form>
-                                    <form method="POST" action="{{ route('owner.attendances.reject_sick_leave', $att) }}">
-                                        @csrf
-                                        <button type="submit" class="rounded bg-red-500 px-2 py-1 text-[9px] font-semibold text-white hover:bg-red-600">Reject</button>
-                                    </form>
-                                </div>
-                            @elseif($isSickLeave)
-                                <span class="block mt-1 text-[9px] text-gray-400">
-                                    {{ $att->sick_leave_status === 'approved' ? 'Disetujui' : 'Ditolak' }}
+                        </td>
+                        <td class="px-4 py-3">
+                            @if($isRejected || $outside || $isSickLeave)
+                                <p class="text-gray-400">Rp0</p>
+                                <p class="text-[9px] {{ $isRejected ? 'text-red-500' : 'text-gray-400' }}">
+                                    {{ $isRejected ? 'Alpa / Tanpa Keterangan' : ($isSickLeave ? 'Tidak ada gaji' : 'Ditolak lokasi') }}
+                                </p>
+                            @else
+                                <p class="text-gray-800 font-semibold">Rp{{ number_format($att->daily_wage, 0, ',', '.') }}</p>
+                                <p class="text-[9px] text-gray-400">Gaji hari ini</p>
+                            @endif
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data presensi pada rentang tanggal ini.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Footer Tabel: Pagination Terintegrasi --}}
+        @if(method_exists($attendances, 'total'))
+            @php $currentPerPage = $perPage ?? request('per_page', 10); @endphp
+            <div class="flex flex-col gap-3 border-t border-[#e7e0d8] bg-[#faf9f7] px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between text-xs text-gray-600">
+                <div class="flex flex-wrap items-center gap-3">
+                    <form action="{{ route('owner.attendances.recap') }}" method="GET" class="flex items-center gap-1.5">
+                        <input type="hidden" name="start_date" value="{{ $startDate->toDateString() }}">
+                        <input type="hidden" name="end_date" value="{{ $endDate->toDateString() }}">
+                        @if(request('employee_id')) <input type="hidden" name="employee_id" value="{{ request('employee_id') }}"> @endif
+                        <select name="per_page" onchange="this.form.submit()" class="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 focus:border-[#0f2137] focus:outline-none">
+                            @foreach([5, 10, 25, 50] as $size)
+                                <option value="{{ $size }}" {{ $currentPerPage == $size ? 'selected' : '' }}>{{ $size }}</option>
+                            @endforeach
+                        </select>
+                        <span class="text-gray-400">per halaman</span>
+                    </form>
+
+                    <span class="hidden sm:inline text-gray-300">|</span>
+
+                    <span class="text-gray-500">
+                        Menampilkan <strong class="text-gray-700">{{ $attendances->firstItem() ?? 0 }} - {{ $attendances->lastItem() ?? 0 }}</strong> dari <strong class="text-gray-700">{{ $attendances->total() }}</strong> data
+                    </span>
+                </div>
+
+                @if($attendances->hasPages())
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-1">
+                            @if($attendances->onFirstPage())
+                                <span class="flex h-7 w-7 items-center justify-center rounded-md text-gray-300 cursor-not-allowed">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                </span>
+                            @else
+                                <a href="{{ $attendances->previousPageUrl() }}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-200/60 transition">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                </a>
+                            @endif
+
+                            @php
+                                $current = $attendances->currentPage();
+                                $last    = $attendances->lastPage();
+                                $start   = max(1, $current - 2);
+                                $end     = min($last, $current + 2);
+                            @endphp
+
+                            @if($start > 1)
+                                <a href="{{ $attendances->url(1) }}" class="flex h-7 min-w-[28px] items-center justify-center rounded-md px-2 text-xs text-gray-600 hover:bg-gray-200/60">1</a>
+                                @if($start > 2) <span class="px-1 text-gray-400">...</span> @endif
+                            @endif
+
+                            @for($i = $start; $i <= $end; $i++)
+                                @if($i == $current)
+                                    <span class="flex h-7 min-w-[28px] items-center justify-center rounded-full bg-[#0f2137] px-2 text-xs font-semibold text-white shadow-sm">{{ $i }}</span>
+                                @else
+                                    <a href="{{ $attendances->url($i) }}" class="flex h-7 min-w-[28px] items-center justify-center rounded-md px-2 text-xs text-gray-600 hover:bg-gray-200/60 transition">{{ $i }}</a>
+                                @endif
+                            @endfor
+
+                            @if($end < $last)
+                                @if($end < $last - 1) <span class="px-1 text-gray-400">...</span> @endif
+                                <a href="{{ $attendances->url($last) }}" class="flex h-7 min-w-[28px] items-center justify-center rounded-md px-2 text-xs text-gray-600 hover:bg-gray-200/60">{{ $last }}</a>
+                            @endif
+
+                            @if($attendances->hasMorePages())
+                                <a href="{{ $attendances->nextPageUrl() }}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-200/60 transition">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                </a>
+                            @else
+                                <span class="flex h-7 w-7 items-center justify-center rounded-md text-gray-300 cursor-not-allowed">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                                 </span>
                             @endif
-                        @elseif($outside)
-                            <span class="inline-flex rounded-full bg-red-50 px-2 py-1 text-[9px] font-semibold text-red-500">✗ Luar Radius</span>
-                        @else
-                            <span class="inline-flex rounded-full bg-[#dff5e9] px-2 py-1 text-[9px] font-semibold text-[#348b66]">✓ Terverifikasi</span>
-                        @endif
-                    </td>
-                    <td class="px-4 py-3">
-                        @if($isRejected || $outside || $isSickLeave)
-                            <p class="text-gray-400">Rp0</p>
-                            <p class="text-[9px] {{ $isRejected ? 'text-red-500' : 'text-gray-400' }}">
-                                {{ $isRejected ? 'Alpa / Tanpa Keterangan' : ($isSickLeave ? 'Tidak ada gaji' : 'Ditolak lokasi') }}
-                            </p>
-                        @else
-                            <p class="text-gray-800 font-semibold">Rp{{ number_format($att->daily_wage, 0, ',', '.') }}</p>
-                            <p class="text-[9px] text-gray-400">Gaji hari ini</p>
-                        @endif
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada data presensi pada rentang tanggal ini.</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+                        </div>
+
+                        <form action="{{ route('owner.attendances.recap') }}" method="GET" class="flex items-center gap-1.5">
+                            <input type="hidden" name="start_date" value="{{ $startDate->toDateString() }}">
+                            <input type="hidden" name="end_date" value="{{ $endDate->toDateString() }}">
+                            @if(request('employee_id')) <input type="hidden" name="employee_id" value="{{ request('employee_id') }}"> @endif
+                            <input type="hidden" name="per_page" value="{{ $currentPerPage }}">
+                            <span class="text-gray-400">Ke hal:</span>
+                            <input type="number" name="page" min="1" max="{{ $attendances->lastPage() }}" placeholder="{{ $attendances->currentPage() }}" class="w-14 rounded-md border border-gray-200 bg-white px-2 py-1 text-center text-xs text-gray-700 focus:border-[#0f2137] focus:outline-none">
+                        </form>
+                    </div>
+                @endif
+            </div>
+        @endif
     </div>
 </div>
 @endsection

@@ -136,6 +136,16 @@
                         </span>
                     </div>
                     <p class="text-xl md:text-2xl font-bold text-[#0f2137]">Rp {{ number_format($salaryData['total_gaji'] ?? 0, 0, ',', '.') }}</p>
+                    <a href="{{ route('employee.payslips') }}"
+                       class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#d8e2ec] bg-[#f4f7fa] px-3 py-2.5 text-[11px] font-bold text-[#0f2137] transition hover:border-[#b9cad8] hover:bg-[#edf3f8]">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Lihat slip gaji
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
                 </div>
 
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-[#e7e0d8] flex flex-col justify-center">

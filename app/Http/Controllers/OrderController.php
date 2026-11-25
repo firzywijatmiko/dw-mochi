@@ -23,36 +23,54 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-        $status = $request->query('status');
+        $status     = $request->query('status');
+        $search     = $request->query('search');
+        $pickupDate = $request->query('pickup_date');
+        $perPage    = in_array((int) $request->query('per_page'), [5, 10, 25, 50]) ? (int) $request->query('per_page') : 10;
+
         $orders = Order::with('details.productVariant')
             ->when(in_array($status, ['pending', 'process', 'completed', 'cancelled']), function ($query) use ($status) {
                 return $query->where('status', $status);
             })
+            ->when($pickupDate, function ($query) use ($pickupDate) {
+                return $query->whereDate('pickup_at', $pickupDate);
+            })
+            ->when($search, function ($query) use ($search) {
+                $cleanId = ltrim(str_ireplace('P-', '', trim($search)), '0');
+                return $query->where(function ($q) use ($search, $cleanId) {
+                    $q->where('customer_name', 'like', "%{$search}%")
+                      ->orWhere('customer_phone', 'like', "%{$search}%");
+                    
+                    if (is_numeric($cleanId) && $cleanId !== '') {
+                        $q->orWhere('id', $cleanId);
+                    }
+                });
+            })
             ->latest()
-            ->paginate(25)
-            ->withQueryString(); // Mempertahankan parameter filter status saat pindah halaman pagination
+            ->paginate($perPage)
+            ->withQueryString();
 
         $variants = ProductVariant::where('is_active', true)->orderBy('name')->get();
 
-        return view('owner.orders.index', compact('orders', 'variants', 'status'));
+        return view('owner.orders.index', compact('orders', 'variants', 'status', 'search', 'pickupDate', 'perPage'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'customer_name'  => 'required|string',
-            'customer_phone' => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
-            'pickup_at'      => 'required|date',
-            'variants'       => 'required|array|min:1',
-            'variants.*.id' => 'required|exists:product_variants,id',
+            'customer_name'       => 'required|string',
+            'customer_phone'      => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'pickup_at'           => 'required|date',
+            'variants'            => 'required|array|min:1',
+            'variants.*.id'       => 'required|exists:product_variants,id',
             'variants.*.quantity' => 'required|integer|min:1',
-            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.price'    => 'required|numeric|min:0',
         ], [
-            'customer_name.required' => 'Nama pelanggan wajib diisi.',
+            'customer_name.required'  => 'Nama pelanggan wajib diisi.',
             'customer_phone.required' => 'Nomor HP wajib diisi.',
-            'customer_phone.regex' => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.',
-            'pickup_at.required' => 'Tanggal dan waktu ambil wajib diisi.',
-            'variants.required' => 'Pilih minimal satu varian produk.'
+            'customer_phone.regex'    => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.',
+            'pickup_at.required'      => 'Tanggal dan waktu ambil wajib diisi.',
+            'variants.required'       => 'Pilih minimal satu varian produk.'
         ]);
 
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at)) {
@@ -67,16 +85,16 @@ class OrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $request->validate([
-            'customer_name'  => 'required|string',
-            'customer_phone' => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
-            'pickup_at'      => 'required|date',
-            'variants'       => 'required|array|min:1',
-            'variants.*.id' => 'required|exists:product_variants,id',
+            'customer_name'       => 'required|string',
+            'customer_phone'      => ['required', 'string', 'regex:/^08[0-9]{8,11}$/'],
+            'pickup_at'           => 'required|date',
+            'variants'            => 'required|array|min:1',
+            'variants.*.id'       => 'required|exists:product_variants,id',
             'variants.*.quantity' => 'required|integer|min:1',
-            'variants.*.price' => 'required|numeric|min:0',
+            'variants.*.price'    => 'required|numeric|min:0',
         ], [
             'customer_name.required' => 'Nama pelanggan wajib diisi.',
-            'customer_phone.regex' => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.'
+            'customer_phone.regex'   => 'Nomor HP harus diawali dengan 08 dan terdiri dari 10-13 angka.'
         ]);
 
         if ($this->orderService->checkDuplicate($request->customer_phone, $request->pickup_at, $order->id)) {
@@ -91,8 +109,8 @@ class OrderController extends Controller
         foreach ($request->input('variants') as $variant) {
             $order->details()->create([
                 'product_variant_id' => $variant['id'],
-                'quantity' => $variant['quantity'],
-                'unit_price' => $variant['price'],
+                'quantity'           => $variant['quantity'],
+                'unit_price'         => $variant['price'],
             ]);
         }
 
@@ -119,13 +137,11 @@ class OrderController extends Controller
         if ($request->wantsJson() || $request->ajax()) {
             if (!$parsedData['is_valid']) {
                 $errorMessage = "Gagal memproses: " . implode(', ', $parsedData['errors']) . ".";
-                
                 return response()->json([
                     'success' => false,
                     'message' => $errorMessage 
                 ], 422); 
             }
-            
             return response()->json(['success' => true]);
         }
 
@@ -146,12 +162,15 @@ class OrderController extends Controller
 
     public function printLabel(Order $order)
     {
-        if ($order->is_label_printed) {
-            return back()->with('error', 'Label untuk pesanan ini sudah pernah dicetak.');
+        if ($order->status !== 'completed') {
+            return back()->with('error', 'Label hanya dapat dicetak untuk pesanan yang sudah selesai.');
         }
 
         $order->load('details.productVariant');
-        $order->update(['is_label_printed' => true]);
+        
+        if (!$order->is_label_printed) {
+            $order->update(['is_label_printed' => true]);
+        }
 
         $pdf = Pdf::loadView('owner.orders.label_pdf', compact('order'))
                  ->setPaper('a6', 'portrait');
@@ -167,19 +186,16 @@ class OrderController extends Controller
             return back()->with('error', 'Pilih minimal satu pesanan yang ingin dicetak labelnya.');
         }
 
-        $alreadyPrinted = Order::whereIn('id', $orderIds)
-                               ->where('is_label_printed', true)
-                               ->exists();
-
-        if ($alreadyPrinted) {
-            return back()->with('error', 'Terdapat pesanan yang sudah pernah dicetak labelnya. Silakan hapus centang pada pesanan tersebut.');
-        }
-
-        Order::whereIn('id', $orderIds)->update(['is_label_printed' => true]);
-
         $orders = Order::with('details.productVariant')
             ->whereIn('id', $orderIds)
+            ->where('status', 'completed')
             ->get();
+
+        if ($orders->isEmpty()) {
+            return back()->with('error', 'Tidak ada pesanan selesai yang valid untuk dicetak.');
+        }
+
+        Order::whereIn('id', $orders->pluck('id'))->update(['is_label_printed' => true]);
 
         $pdf = Pdf::loadView('owner.orders.labels_bulk_pdf', compact('orders'))
                  ->setPaper('a4', 'portrait');

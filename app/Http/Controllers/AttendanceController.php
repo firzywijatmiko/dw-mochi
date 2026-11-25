@@ -191,6 +191,10 @@ class AttendanceController extends Controller
             'start_date.after_or_equal' => 'Data presensi hanya ditampilkan untuk 1 tahun terakhir.',
         ]);
 
+        $perPage = in_array((int) $request->input('per_page'), [5, 10, 25, 50])
+            ? (int) $request->input('per_page')
+            : 10;
+
         $startDate = $request->filled('start_date')
             ? Carbon::parse($request->start_date)->startOfDay()
             : Carbon::today()->startOfDay();
@@ -205,17 +209,21 @@ class AttendanceController extends Controller
             $attendancesQuery->where('employees_id', $request->employee_id);
         }
 
+        // Ambil seluruh koleksi hasil filter untuk menghitung summary (mendukung accessor model)
+        $allFilteredAttendances = (clone $attendancesQuery)->get();
+
+        $summary = [
+            'present'    => $allFilteredAttendances->where('attendance_status', 'hadir')->whereNotNull('check_in_at')->count(),
+            'sick_leave' => $allFilteredAttendances->where('attendance_status', 'izin_sakit')->count(),
+            'absent'     => $allFilteredAttendances->where('attendance_status', 'alpa')->count(),
+            'outside'    => $allFilteredAttendances->where('location_status', 'Luar Radius')->count(),
+        ];
+
         $attendances = $attendancesQuery
             ->orderBy('date', 'desc')
             ->orderBy('check_in_at')
-            ->get();
-
-        $summary = [
-            'present' => $attendances->where('attendance_status', 'hadir')->whereNotNull('check_in_at')->count(),
-            'sick_leave' => $attendances->where('attendance_status', 'izin_sakit')->count(),
-            'absent' => $attendances->where('attendance_status', 'alpa')->count(),
-            'outside' => $attendances->where('location_status', 'Luar Radius')->count(),
-        ];
+            ->paginate($perPage)
+            ->withQueryString();
 
         $employees = Employee::orderBy('name')->get();
 
@@ -224,7 +232,8 @@ class AttendanceController extends Controller
             'endDate',
             'attendances',
             'summary',
-            'employees'
+            'employees',
+            'perPage'
         ));
     }
 }

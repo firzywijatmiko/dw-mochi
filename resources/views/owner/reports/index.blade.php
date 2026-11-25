@@ -8,10 +8,12 @@
 
     @php $currentPerPage = $perPage ?? request('per_page', 10); @endphp
 
-    {{-- Filter Periode & Tombol Unduh PDF --}}
+{{-- Filter Periode (Bersih tanpa multi-button) & Tombol Unduh PDF --}}
     <div class="flex flex-col sm:flex-row flex-wrap sm:items-center justify-between gap-3 rounded-lg border border-[#e7e0d8] bg-white p-3 shadow-sm">
         <form method="GET" action="{{ route('owner.reports.index') }}" class="flex flex-wrap items-center gap-2">
             @if(request('per_page')) <input type="hidden" name="per_page" value="{{ request('per_page') }}"> @endif
+            <input type="hidden" name="chart_mode" value="{{ $chartMode ?? 'weekly' }}">
+
             <div class="flex items-center gap-1.5">
                 <span class="text-xs text-gray-500">Dari:</span>
                 <input type="date" name="start_date" value="{{ $startDate }}" class="px-2.5 py-1.5 border border-gray-200 rounded-md text-xs text-gray-700 focus:border-[#0f2137] outline-none">
@@ -184,49 +186,73 @@
         </div>
     </div>
 
-    <!-- Grafik Tren Mingguan -->
+    <!-- Grafik Tren Keuangan -->
     @php
         $short = function ($n) {
             if ($n >= 1000000) return rtrim(rtrim(number_format($n / 1000000, 2, ',', '.'), '0'), ',') . 'jt';
             if ($n > 0) return rtrim(rtrim(number_format($n / 1000, 1, ',', '.'), '0'), ',') . 'rb';
             return '0';
         };
-        $hasChartData = collect($chartData ?? [])->contains(function ($w) { return $w['income'] > 0 || $w['expense'] > 0; });
+        $chartList    = $chartData ?? [];
+        $totalBars    = count($chartList);
+        $labelStep    = $totalBars > 15 ? (int) ceil($totalBars / 10) : 1; // Atur jarak label otomatis agar tidak bertumpuk
+        $hasChartData = collect($chartList)->contains(fn($w) => $w['income'] > 0 || $w['expense'] > 0);
     @endphp
     <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] p-4">
-        <h3 class="font-bold text-[#0f2137] text-sm mb-4">Tren Keuangan 5 Minggu Terakhir</h3>
-        <div class="flex overflow-x-auto pb-2">
-            <div class="min-w-[400px] w-full flex">
-                <div class="flex flex-col justify-between text-[10px] text-gray-400 pr-2 h-40 text-right select-none w-10">
-                    <span>{{ isset($chartMax) ? $short($chartMax) : '0' }}</span>
-                    <span>{{ isset($chartMax) ? $short($chartMax * 0.5) : '0' }}</span>
-                    <span>0</span>
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+                <h3 class="font-bold text-[#0f2137] text-sm">
+                    Tren Keuangan {{ ($chartMode ?? 'weekly') === 'daily' ? 'Harian' : (($chartMode ?? 'weekly') === 'monthly' ? 'Bulanan' : 'Mingguan') }}
+                </h3>
+                <p class="text-[11px] text-gray-400">
+                    Periode {{ \Carbon\Carbon::parse($startDate)->translatedFormat('d M Y') }} – {{ \Carbon\Carbon::parse($endDate)->translatedFormat('d M Y') }}
+                </p>
+            </div>
+
+            {{-- Tab Switcher Harian / Mingguan / Bulanan --}}
+            <div class="inline-flex rounded-lg border border-gray-200 bg-[#faf9f7] p-0.5 text-xs">
+                @foreach(['daily' => 'Harian', 'weekly' => 'Mingguan', 'monthly' => 'Bulanan'] as $modeKey => $modeLabel)
+                    <a href="{{ route('owner.reports.index', array_merge(request()->query(), ['start_date' => $startDate, 'end_date' => $endDate, 'chart_mode' => $modeKey])) }}"
+                       class="px-3 py-1 rounded-md font-medium transition {{ ($chartMode ?? 'weekly') === $modeKey ? 'bg-[#0f2137] text-white shadow-sm' : 'text-gray-600 hover:text-[#0f2137]' }}">
+                        {{ $modeLabel }}
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="w-full flex">
+            <div class="flex flex-col justify-between text-[10px] text-gray-400 pr-2 h-40 text-right select-none w-10 shrink-0">
+                <span>{{ isset($chartMax) ? $short($chartMax) : '0' }}</span>
+                <span>{{ isset($chartMax) ? $short($chartMax * 0.5) : '0' }}</span>
+                <span>0</span>
+            </div>
+            <div class="flex-1 relative min-w-0">
+                <div class="absolute inset-0 border-b border-l border-gray-200"></div>
+                <div class="absolute inset-x-0 top-1/2 border-t border-dashed border-gray-100"></div>
+                <div class="relative h-40 flex items-end justify-around px-1 gap-0.5">
+                    @foreach($chartList as $w)
+                        @php
+                            $incomePct  = (isset($chartMax) && $chartMax > 0) ? ($w['income']  / $chartMax * 100) : 0;
+                            $expensePct = (isset($chartMax) && $chartMax > 0) ? ($w['expense'] / $chartMax * 100) : 0;
+                        @endphp
+                        <div class="flex-1 h-full flex items-end justify-center gap-[1px] sm:gap-1 z-10 group min-w-0">
+                            <div class="w-full max-w-[18px] bg-[#0f2137] rounded-t relative hover:opacity-80 transition" style="height: {{ max($incomePct, 1) }}%;" title="{{ $w['label'] }} | Pemasukan: Rp {{ number_format($w['income'], 0, ',', '.') }}"></div>
+                            <div class="w-full max-w-[18px] bg-[#8b5a33] rounded-t relative hover:opacity-80 transition" style="height: {{ max($expensePct, 1) }}%;" title="{{ $w['label'] }} | Pengeluaran: Rp {{ number_format($w['expense'], 0, ',', '.') }}"></div>
+                        </div>
+                    @endforeach
                 </div>
-                <div class="flex-1 relative">
-                    <div class="absolute inset-0 border-b border-l border-gray-200"></div>
-                    <div class="absolute inset-x-0 top-1/2 border-t border-dashed border-gray-100"></div>
-                    <div class="relative h-40 flex items-end justify-around px-2">
-                        @foreach($chartData ?? [] as $w)
-                            @php
-                                $incomePct  = (isset($chartMax) && $chartMax > 0) ? ($w['income']  / $chartMax * 100) : 0;
-                                $expensePct = (isset($chartMax) && $chartMax > 0) ? ($w['expense'] / $chartMax * 100) : 0;
-                            @endphp
-                            <div class="flex-1 h-full flex items-end justify-center gap-1 z-10 group">
-                                <div class="w-3 sm:w-5 bg-[#0f2137] rounded-t relative hover:opacity-80 transition" style="height: {{ max($incomePct, 1) }}%;" title="Pemasukan: Rp {{ number_format($w['income'], 0, ',', '.') }}"></div>
-                                <div class="w-3 sm:w-5 bg-[#8b5a33] rounded-t relative hover:opacity-80 transition" style="height: {{ max($expensePct, 1) }}%;" title="Pengeluaran: Rp {{ number_format($w['expense'], 0, ',', '.') }}"></div>
-                            </div>
-                        @endforeach
-                    </div>
-                    <div class="flex justify-around px-2 mt-1.5">
-                        @foreach($chartData ?? [] as $w)
-                            <span class="flex-1 text-center text-[10px] text-gray-500 truncate px-1">{{ $w['label'] }}</span>
-                        @endforeach
-                    </div>
+                <div class="flex justify-around px-1 mt-1.5">
+                    @foreach($chartList as $idx => $w)
+                        <span class="flex-1 text-center text-[10px] text-gray-500 truncate">
+                            {{ ($idx % $labelStep === 0) ? $w['label'] : '' }}
+                        </span>
+                    @endforeach
                 </div>
             </div>
         </div>
+
         @unless($hasChartData)
-            <p class="text-center text-xs text-gray-400 mt-2">Belum ada data transaksi 5 minggu terakhir.</p>
+            <p class="text-center text-xs text-gray-400 mt-2">Belum ada data transaksi pada periode ini.</p>
         @endunless
         <div class="flex justify-center items-center space-x-5 mt-3">
             <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 bg-[#0f2137] rounded-sm"></span><span class="text-xs text-gray-600">Pemasukan</span></div>
@@ -234,10 +260,10 @@
         </div>
     </div>
 
-    <!-- Card Gabungan Tabel Rincian Laba Rugi Harian & Pagination -->
+    <!-- Card Gabungan Tabel Rincian Arus Kas Harian & Pagination -->
     <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] overflow-hidden">
         <div class="px-4 py-3 border-b border-[#e7e0d8] bg-[#faf9f7]">
-            <h3 class="font-bold text-[#0f2137] text-sm">Rincian Laba Rugi Harian</h3>
+            <h3 class="font-bold text-[#0f2137] text-sm">Rincian Arus Kas Harian</h3>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-[650px] w-full text-left text-xs">
@@ -247,7 +273,7 @@
                         <th class="px-4 py-3">Pesanan Selesai</th>
                         <th class="px-4 py-3">Pendapatan</th>
                         <th class="px-4 py-3">Bahan Baku</th>
-                        <th class="px-4 py-3">Gaji Harian</th>
+                        <th class="px-4 py-3">Gaji Dibayarkan</th>
                         <th class="px-4 py-3">Laba Bersih</th>
                     </tr>
                 </thead>
@@ -277,6 +303,7 @@
                     <form action="{{ route('owner.reports.index') }}" method="GET" class="flex items-center gap-1.5">
                         <input type="hidden" name="start_date" value="{{ $startDate }}">
                         <input type="hidden" name="end_date" value="{{ $endDate }}">
+                        <input type="hidden" name="chart_mode" value="{{ $chartMode ?? 'weekly' }}">
                         <select name="per_page" onchange="this.form.submit()" class="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 focus:border-[#0f2137] focus:outline-none">
                             @foreach([5, 10, 25, 50] as $size)
                                 <option value="{{ $size }}" {{ $currentPerPage == $size ? 'selected' : '' }}>{{ $size }}</option>
@@ -345,6 +372,7 @@
                             <input type="hidden" name="start_date" value="{{ $startDate }}">
                             <input type="hidden" name="end_date" value="{{ $endDate }}">
                             <input type="hidden" name="per_page" value="{{ $currentPerPage }}">
+                            <input type="hidden" name="chart_mode" value="{{ $chartMode ?? 'weekly' }}">
                             <span class="text-gray-400">Ke hal:</span>
                             <input type="number" name="page" min="1" max="{{ $dailyReport->lastPage() }}" placeholder="{{ $dailyReport->currentPage() }}" class="w-14 rounded-md border border-gray-200 bg-white px-2 py-1 text-center text-xs text-gray-700 focus:border-[#0f2137] focus:outline-none">
                         </form>

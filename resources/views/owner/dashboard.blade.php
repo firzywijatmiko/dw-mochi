@@ -50,11 +50,6 @@
 
     </div>
 
-    <a href="{{ route('owner.orders.index') }}" class="inline-flex items-center gap-2 rounded-md bg-[#0f2137] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#183252]">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
-        Tambah Pesanan Baru
-    </a>
-
     <section class="overflow-hidden rounded-lg border border-[#e7e0d8] bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-[#eee9e4] px-4 py-3">
             <h2 class="text-xs font-bold text-[#0f2137]">Pesanan yang Perlu Diperhatikan</h2>

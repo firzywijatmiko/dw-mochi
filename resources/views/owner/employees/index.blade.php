@@ -234,19 +234,25 @@
             formData: { name: '', username: '', phone: '', status: 'Aktif', base_daily_wage: '', overtime_rate_1x: '', overtime_rate_2x: '' },
             displayWage: '', displayOt1: '', displayOt2: '',
 
+            toCleanIntString(value) {
+                if (value === null || value === undefined || value === '') return '';
+                let num = parseFloat(value);
+                if (isNaN(num)) return value.toString().replace(/[^0-9]/g, '');
+                return Math.floor(num).toString();
+            },
+
             formatRupiah(value) {
-                if (!value && value !== 0) return '';
-                let numberString = value.toString().replace(/[^,\d]/g, '');
-                let split = numberString.split(',');
-                let sisa = split[0].length % 3;
-                let rupiah = split[0].substr(0, sisa);
-                let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+                let clean = this.toCleanIntString(value);
+                if (!clean) return '';
+                let sisa = clean.length % 3;
+                let rupiah = clean.substr(0, sisa);
+                let ribuan = clean.substr(sisa).match(/\d{3}/gi);
 
                 if (ribuan) {
                     let separator = sisa ? '.' : '';
                     rupiah += separator + ribuan.join('.');
                 }
-                return split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+                return rupiah;
             },
 
             formatWage(event, field) {
@@ -270,18 +276,23 @@
                 this.isEdit = true;
                 let baseUrl = "{{ route('owner.employees.update', ':id') }}";
                 this.formAction = baseUrl.replace(':id', employee.id);
+
+                let cleanWage = this.toCleanIntString(employee.base_daily_wage);
+                let cleanOt1  = this.toCleanIntString(employee.overtime_rate_1x);
+                let cleanOt2  = this.toCleanIntString(employee.overtime_rate_2x);
+
                 this.formData = { 
                     name: employee.name, 
                     username: employee.user ? employee.user.username : '',
                     phone: employee.user ? employee.user.phone : '', 
                     status: employee.status, 
-                    base_daily_wage: employee.base_daily_wage || '',
-                    overtime_rate_1x: employee.overtime_rate_1x || '',
-                    overtime_rate_2x: employee.overtime_rate_2x || ''
+                    base_daily_wage: cleanWage,
+                    overtime_rate_1x: cleanOt1,
+                    overtime_rate_2x: cleanOt2
                 };
-                this.displayWage = this.formatRupiah(employee.base_daily_wage || '');
-                this.displayOt1 = this.formatRupiah(employee.overtime_rate_1x || '');
-                this.displayOt2 = this.formatRupiah(employee.overtime_rate_2x || '');
+                this.displayWage = this.formatRupiah(cleanWage);
+                this.displayOt1  = this.formatRupiah(cleanOt1);
+                this.displayOt2  = this.formatRupiah(cleanOt2);
                 this.isFormModalOpen = true;
             },
 
@@ -295,5 +306,5 @@
             }
         }
     }
-</script>
+</script>   
 @endsection

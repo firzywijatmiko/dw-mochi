@@ -79,8 +79,8 @@
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
                     <input type="text" 
+                           name="search"
                            x-model.debounce.150ms="searchQuery"
-                           @keydown.enter.prevent
                            placeholder="Cari nama, no. HP, atau ID..." 
                            class="w-full rounded-md border border-gray-200 pl-8 pr-7 py-1.5 text-xs text-gray-700 placeholder-gray-400 focus:border-[#0f2137] focus:outline-none">
                     
@@ -94,7 +94,7 @@
                     </button>
                 </div>
 
-                {{-- Tombol Reset (Selalu Tampil Sejak Awal) --}}
+                {{-- Tombol Reset --}}
                 <a href="{{ route('owner.orders.index', ['per_page' => $perPage]) }}" 
                    @click="if (!hasServerFilter) { $event.preventDefault(); searchQuery = ''; }"
                    :class="hasAnyFilter ? 'border-red-200 bg-red-50/70 text-red-600 hover:bg-red-100' : 'border-gray-200 bg-gray-50 text-gray-400 pointer-events-none opacity-60'"
@@ -166,9 +166,15 @@
                                 </span>
                                 
                                 @if($isCompleted)
-                                    <span class="text-[10px] whitespace-nowrap {{ $order->is_label_printed ? 'text-emerald-600' : 'text-gray-400' }}">
-                                        {{ $order->is_label_printed ? 'Sudah dicetak' : 'Belum dicetak' }}
-                                    </span>
+                                    @if($order->is_label_printed)
+                                        <span class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium bg-teal-50 text-teal-700 border border-teal-200 whitespace-nowrap">
+                                            ✓ Sudah dicetak
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-medium bg-orange-50 text-orange-700 border border-orange-200 whitespace-nowrap">
+                                            • Belum dicetak
+                                        </span>
+                                    @endif
                                 @endif
                             </div>
                         </td>
@@ -186,13 +192,13 @@
                                     Hapus
                                 </button>
                                 
-                                {{-- Tombol Cetak Label & Cetak Lagi: Warna sama (#0f2137), beda tulisan & icon --}}
+                                {{-- Tombol Cetak Label (Belum dicetak = Navy Gelap) vs Cetak Lagi (Sudah dicetak = Abu-abu Lembut) --}}
                                 @if($isCompleted)
                                     @if($order->is_label_printed)
                                         <button type="button" 
                                                 @click="openLabel(@js($order->load('details.productVariant')), '{{ route('owner.orders.print_label', $order) }}')" 
-                                                class="inline-flex items-center gap-1 rounded-md bg-[#0f2137] px-2.5 py-1 text-[11px] font-medium text-white hover:bg-[#183252] transition">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                class="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-200 transition">
+                                            <svg class="h-3 w-3 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                             Cetak Lagi
                                         </button>
                                     @else
@@ -214,7 +220,7 @@
                 @empty
                     <tr>
                         <td colspan="11" class="px-4 py-10 text-center text-xs text-gray-400">
-                            {{ ($status || $pickupDate) ? 'Tidak ada pesanan yang sesuai dengan filter.' : 'Belum ada data pesanan.' }}
+                            {{ ($status || $pickupDate || $search) ? 'Tidak ada pesanan yang sesuai dengan filter.' : 'Belum ada data pesanan.' }}
                         </td>
                     </tr>
                 @endforelse
@@ -224,11 +230,11 @@
 
         {{-- Footer Tabel: Pagination Terintegrasi --}}
         <div class="flex flex-col gap-3 border-t border-[#e7e0d8] bg-[#faf9f7] px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between text-xs text-gray-600">
-            {{-- Kiri: Dropdown Per Page & Info Hasil --}}
             <div class="flex flex-wrap items-center gap-3">
                 <form action="{{ route('owner.orders.index') }}" method="GET" class="flex items-center gap-1.5">
                     @if($status) <input type="hidden" name="status" value="{{ $status }}"> @endif
                     @if($pickupDate) <input type="hidden" name="pickup_date" value="{{ $pickupDate }}"> @endif
+                    @if($search) <input type="hidden" name="search" value="{{ $search }}"> @endif
                     <select name="per_page" onchange="this.form.submit()" class="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 focus:border-[#0f2137] focus:outline-none">
                         @foreach([5, 10, 25, 50] as $size)
                             <option value="{{ $size }}" {{ $perPage == $size ? 'selected' : '' }}>{{ $size }}</option>
@@ -244,12 +250,9 @@
                 </span>
             </div>
 
-            {{-- Tengah & Kanan: Navigasi Halaman & Go To --}}
             @if($orders->hasPages())
                 <div class="flex flex-wrap items-center gap-3">
-                    {{-- Tombol Nomor Halaman --}}
                     <div class="flex items-center gap-1">
-                        {{-- Prev --}}
                         @if($orders->onFirstPage())
                             <span class="flex h-7 w-7 items-center justify-center rounded-md text-gray-300 cursor-not-allowed">
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -260,7 +263,6 @@
                             </a>
                         @endif
 
-                        {{-- Nomor Halaman --}}
                         @php
                             $current = $orders->currentPage();
                             $last    = $orders->lastPage();
@@ -286,7 +288,6 @@
                             <a href="{{ $orders->url($last) }}" class="flex h-7 min-w-[28px] items-center justify-center rounded-md px-2 text-xs text-gray-600 hover:bg-gray-200/60">{{ $last }}</a>
                         @endif
 
-                        {{-- Next --}}
                         @if($orders->hasMorePages())
                             <a href="{{ $orders->nextPageUrl() }}" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-600 hover:bg-gray-200/60 transition">
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -298,10 +299,10 @@
                         @endif
                     </div>
 
-                    {{-- Go To Page --}}
                     <form action="{{ route('owner.orders.index') }}" method="GET" class="flex items-center gap-1.5">
                         @if($status) <input type="hidden" name="status" value="{{ $status }}"> @endif
                         @if($pickupDate) <input type="hidden" name="pickup_date" value="{{ $pickupDate }}"> @endif
+                        @if($search) <input type="hidden" name="search" value="{{ $search }}"> @endif
                         <input type="hidden" name="per_page" value="{{ $perPage }}">
                         <span class="text-gray-400">Ke hal:</span>
                         <input type="number" name="page" min="1" max="{{ $orders->lastPage() }}" placeholder="{{ $orders->currentPage() }}" class="w-14 rounded-md border border-gray-200 bg-white px-2 py-1 text-center text-xs text-gray-700 focus:border-[#0f2137] focus:outline-none">
@@ -501,7 +502,7 @@ function orderManager() {
         labelOrder: { details: [] }, labelUrl: '', 
         selectedOrders: [], 
         searchQuery: @js($search ?? ''),
-        hasServerFilter: @json((bool) ($status || $pickupDate)),
+        hasServerFilter: @json((bool) ($status || $pickupDate || $search)),
         form: JSON.parse(JSON.stringify(empty)),
 
         waText: '',

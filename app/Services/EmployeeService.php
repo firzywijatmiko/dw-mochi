@@ -13,24 +13,24 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
-            // Buat akun login Karyawan (password default disamakan dengan nomor HP)
+            // Buat akun login Karyawan
             $user = User::create([
-                'name' => $data['name'],
+                'name'     => $data['name'],
                 'username' => $data['username'],
-                'phone' => $data['phone'],
-                'password' => Hash::make($data['password']), 
-                'role' => 'Karyawan',
-                'status' => $data['status'],
+                'phone'    => $data['phone'],
+                'password' => Hash::make($data['password']),
+                'role'     => 'Karyawan',
+                'status'   => $data['status'],
             ]);
 
             // Simpan detail gaji karyawan
             $employee = Employee::create([
-                'users_id' => $user->id,
-                'name' => $data['name'],
-                'base_daily_wage' => $data['base_daily_wage'],
+                'users_id'         => $user->id,
+                'name'             => $data['name'],
+                'base_daily_wage'  => $data['base_daily_wage'],
                 'overtime_rate_1x' => $data['overtime_rate_1x'] ?? 0,
                 'overtime_rate_2x' => $data['overtime_rate_2x'] ?? 0,
-                'status' => $data['status'],
+                'status'           => $data['status'],
             ]);
 
             DB::commit();
@@ -45,21 +45,28 @@ class EmployeeService
     {
         DB::beginTransaction();
         try {
-            // Update akun user
-            $employee->user->update([
-                'name' => $data['name'],
+            $userData = [
+                'name'     => $data['name'],
                 'username' => $data['username'],
-                'phone' => $data['phone'],
-                'status' => $data['status'],
-            ]);
+                'phone'    => $data['phone'],
+                'status'   => $data['status'],
+            ];
+
+            // Jika owner mengisi password baru saat edit, update & hash password-nya
+            if (!empty($data['password'])) {
+                $userData['password'] = Hash::make($data['password']);
+            }
+
+            // Update akun user
+            $employee->user->update($userData);
 
             // Update detail gaji
             $employee->update([
-                'name' => $data['name'],
-                'base_daily_wage' => $data['base_daily_wage'],
+                'name'             => $data['name'],
+                'base_daily_wage'  => $data['base_daily_wage'],
                 'overtime_rate_1x' => $data['overtime_rate_1x'] ?? 0,
                 'overtime_rate_2x' => $data['overtime_rate_2x'] ?? 0,
-                'status' => $data['status'],
+                'status'           => $data['status'],
             ]);
 
             DB::commit();

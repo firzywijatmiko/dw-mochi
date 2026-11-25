@@ -46,7 +46,8 @@ class OrderController extends Controller
                     }
                 });
             })
-            ->latest()
+            ->orderBy('pickup_at', 'desc')
+            ->orderBy('id', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 

@@ -15,9 +15,8 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
         $endDate   = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
         $perPage   = (int) $request->input('per_page', 10);
-        $chartMode = $request->input('chart_mode', 'weekly'); // default: weekly (daily | weekly | monthly)
+        $chartMode = $request->input('chart_mode', 'weekly'); // daily | weekly | monthly
 
-        // Pastikan urutan tanggal valid jika user terbalik memilih
         if ($startDate > $endDate) {
             [$startDate, $endDate] = [$endDate, $startDate];
         }
@@ -47,11 +46,11 @@ class ReportController extends Controller
         $wageExpense     = (float) $payrollExpenses->sum('amount');
         $totalExpense    = $materialExpense + $wageExpense;
 
-        // 2. PEMASUKAN TOTAL
+        // 2. PEMASUKAN TOTAL (Berdasarkan tanggal ambil pesanan / pickup_at yang sudah completed)
         $totalIncome = (float) DB::table('order_details')
             ->join('orders', 'orders.id', '=', 'order_details.order_id')
             ->where('orders.status', 'completed')
-            ->whereBetween(DB::raw('DATE(orders.updated_at)'), [$startDate, $endDate])
+            ->whereBetween(DB::raw('DATE(orders.pickup_at)'), [$startDate, $endDate])
             ->sum(DB::raw('order_details.quantity * order_details.unit_price'));
 
         $netProfit = $totalIncome - $totalExpense;
@@ -66,13 +65,13 @@ class ReportController extends Controller
 
             $dayOrders = DB::table('orders')
                 ->where('status', 'completed')
-                ->whereDate('updated_at', $day)
+                ->whereDate('pickup_at', $day)
                 ->count();
 
             $dayRevenue = (float) DB::table('order_details')
                 ->join('orders', 'orders.id', '=', 'order_details.order_id')
                 ->where('orders.status', 'completed')
-                ->whereDate('orders.updated_at', $day)
+                ->whereDate('orders.pickup_at', $day)
                 ->sum(DB::raw('order_details.quantity * order_details.unit_price'));
 
             $dayMaterial = (float) DB::table('raw_material_expenses')
@@ -132,7 +131,7 @@ class ReportController extends Controller
                 $inc = (float) DB::table('order_details')
                     ->join('orders', 'orders.id', '=', 'order_details.order_id')
                     ->where('orders.status', 'completed')
-                    ->whereDate('orders.updated_at', $dayStr)
+                    ->whereDate('orders.pickup_at', $dayStr)
                     ->sum(DB::raw('order_details.quantity * order_details.unit_price'));
 
                 $matExp = (float) DB::table('raw_material_expenses')
@@ -161,7 +160,7 @@ class ReportController extends Controller
                 $inc = (float) DB::table('order_details')
                     ->join('orders', 'orders.id', '=', 'order_details.order_id')
                     ->where('orders.status', 'completed')
-                    ->whereBetween(DB::raw('DATE(orders.updated_at)'), [$qStart->toDateString(), $qEnd->toDateString()])
+                    ->whereBetween(DB::raw('DATE(orders.pickup_at)'), [$qStart->toDateString(), $qEnd->toDateString()])
                     ->sum(DB::raw('order_details.quantity * order_details.unit_price'));
 
                 $matExp = (float) DB::table('raw_material_expenses')
@@ -194,7 +193,7 @@ class ReportController extends Controller
                 $inc = (float) DB::table('order_details')
                     ->join('orders', 'orders.id', '=', 'order_details.order_id')
                     ->where('orders.status', 'completed')
-                    ->whereBetween(DB::raw('DATE(orders.updated_at)'), [$qStart->toDateString(), $qEnd->toDateString()])
+                    ->whereBetween(DB::raw('DATE(orders.pickup_at)'), [$qStart->toDateString(), $qEnd->toDateString()])
                     ->sum(DB::raw('order_details.quantity * order_details.unit_price'));
 
                 $matExp = (float) DB::table('raw_material_expenses')

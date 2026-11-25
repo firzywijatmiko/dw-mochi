@@ -42,7 +42,11 @@ class PayrollController extends Controller
             $query->where('employees_id', $selectedEmployee);
         }
 
-        $payrolls = $query->paginate(25)->withQueryString();
+        $perPage = in_array((int) $request->input('per_page'), [5, 10, 25, 50])
+            ? (int) $request->input('per_page')
+            : 10;
+
+        $payrolls = $query->paginate($perPage)->withQueryString();
 
         // Hitung selisih presensi untuk item yang tampil
         $payrolls->getCollection()->each(function ($p) {
@@ -63,7 +67,7 @@ class PayrollController extends Controller
         $totalUnpaid = $this->recordService->totalUnpaid();
 
         return view('owner.payrolls.index', compact(
-            'payrolls', 'employees', 'monthOptions', 'month', 'selectedEmployee', 'totalUnpaid'
+            'payrolls', 'employees', 'monthOptions', 'month', 'selectedEmployee', 'totalUnpaid', 'perPage'
         ));
     }
 

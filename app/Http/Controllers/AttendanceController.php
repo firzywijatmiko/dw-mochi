@@ -148,32 +148,71 @@ class AttendanceController extends Controller
     public function salaryHistory()
     {
         $employee = Auth::user()->employee;
-        
-        // Ambil data presensi minggu ini atau sesuai kebutuhan aplikasimu
-        $attendancesList = \App\Models\Attendance::where('employees_id', $employee->id)
+
+        // 1. Data khusus minggu berjalan (Senin - Sabtu) untuk Banner Navy di atas
+        $currentWeekStart = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
+        $currentWeekEnd   = Carbon::now()->startOfWeek(Carbon::MONDAY)->addDays(5)->toDateString();
+
+        $currentWeekAttendances = Attendance::where('employees_id', $employee->id)
+            ->whereBetween('date', [$currentWeekStart, $currentWeekEnd])
+            ->get();
+
+        $currentSickDays = $currentWeekAttendances->where('attendance_status', 'izin_sakit')
+            ->where('sick_leave_status', 'approved')
+            ->count();
+
+        $salaryData = [
+            'period_label'    => Carbon::parse($currentWeekStart)->translatedFormat('d M') . ' - ' . Carbon::parse($currentWeekEnd)->translatedFormat('d M Y'),
+            'total_gaji'      => $currentWeekAttendances->sum('daily_wage') + ($currentSickDays * config('payroll.sick_allowance', 0)),
+            'total_kehadiran' => $currentWeekAttendances->where('attendance_status', 'hadir')->whereNotNull('check_in_at')->count(),
+            'total_lembur'    => $currentWeekAttendances->sum(fn ($att) => ($att->overtime_1x ?? 0) + ($att->overtime_2x ?? 0)),
+        ];
+
+        // 2. Rekap per minggu (1 tahun terakhir) + sinkronisasi dengan Slip Gaji
+        $attendancesList = Attendance::where('employees_id', $employee->id)
             ->where('date', '>=', Carbon::now()->subYear()->toDateString())
             ->orderBy('date', 'desc')
             ->get();
 
-        // Hitung total kehadiran, lembur, dan total gaji secara aman
-        $totalKehadiran = $attendancesList->where('attendance_status', '!=', 'alpa')->count();
-        $totalLembur = $attendancesList->sum(function($att) {
-            return ($att->overtime_1x ?? 0) + ($att->overtime_2x ?? 0);
-        });
-        
-        // Hitung total gaji berdasarkan gaji harian dan lembur (atau sesuaikan dengan service gaji yang sudah ada di aplikasimu)
-        $totalGaji = $attendancesList->sum(function($att) {
-            return $att->daily_wage ?? 0;
+        $payslips = \App\Models\Payslip::where('employees_id', $employee->id)
+            ->get()
+            ->keyBy(fn ($p) => $p->period_start->toDateString());
+
+        $grouped = $attendancesList->groupBy(function ($att) {
+            return $att->date->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
         });
 
-        $salaryData = [
-            'total_gaji'      => $totalGaji,
-            'total_kehadiran' => $totalKehadiran,
-            'total_lembur'    => $totalLembur,
-            'attendances'     => $attendancesList
-        ];
+        foreach ($payslips as $startKey => $slip) {
+            if (!$grouped->has($startKey)) {
+                $grouped->put($startKey, collect());
+            }
+        }
 
-        return view('employee.salary_history', compact('salaryData'));
+        $weeklyPeriods = $grouped->sortKeysDesc()->map(function ($items, $weekStartStr) use ($payslips) {
+            $start = Carbon::parse($weekStartStr);
+            $end   = $start->copy()->addDays(5);
+            $slip  = $payslips->get($weekStartStr);
+
+            $daysPresent = $items->where('attendance_status', 'hadir')->whereNotNull('check_in_at')->count();
+            $sickDays    = $items->where('attendance_status', 'izin_sakit')->where('sick_leave_status', 'approved')->count();
+            $overtime    = $items->sum(fn ($a) => ($a->overtime_1x ?? 0) + ($a->overtime_2x ?? 0));
+            $estWage     = $items->sum('daily_wage') + ($sickDays * config('payroll.sick_allowance', 0));
+
+            return [
+                'period_label' => $start->translatedFormat('d M Y') . ' – ' . $end->translatedFormat('d M Y'),
+                'is_current'   => $weekStartStr === Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString(),
+                'is_paid'      => (bool) $slip,
+                'paid_at'      => $slip ? $slip->paid_at : null,
+                'total_pay'    => $slip ? $slip->total_pay : $estWage,
+                'days_present' => $slip ? $slip->days_present : $daysPresent,
+                'sick_days'    => $sickDays,
+                'overtime'     => $overtime,
+                'payslip'      => $slip,
+                'attendances'  => $items->sortByDesc('date')->values(),
+            ];
+        })->values();
+
+        return view('employee.salary_history', compact('salaryData', 'weeklyPeriods'));
     }
 
         /**

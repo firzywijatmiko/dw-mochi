@@ -10,32 +10,36 @@ use Illuminate\Support\Facades\Auth;
 class DashboardController extends Controller
 {
     /**
-     * Menampilkan ringkasan pesanan untuk owner.
+     * Menampilkan ringkasan pesanan untuk owner berdasarkan jadwal ambil (pickup_at).
      */
     public function index()
     {
         $today = Carbon::today()->toDateString();
 
-        // 1. Ambil Data Pesanan (sesuai OrderController: pending, process, completed, cancelled)
-        $activeOrders = Order::whereIn('status', ['pending', 'process'])->count();
-
-        $completedToday = Order::where('status', 'completed')
-            ->whereDate('updated_at', $today)
+        // 1. Pesanan Aktif Hari Ini (jadwal ambil hari ini yang masih pending/process)
+        $activeOrders = Order::whereIn('status', ['pending', 'process'])
+            ->whereDate('pickup_at', $today)
             ->count();
 
+        // 2. Pesanan Selesai Hari Ini (jadwal ambil hari ini yang sudah completed)
+        $completedToday = Order::where('status', 'completed')
+            ->whereDate('pickup_at', $today)
+            ->count();
+
+        // 3. Karyawan Hadir Hari Ini
         $presentEmployees = Attendance::whereDate('date', $today)
             ->whereNotNull('check_in_at')
             ->distinct()
             ->count('employees_id');
 
-        // 2. Daftar seluruh pesanan aktif, termasuk yang sudah lewat jadwal ambil
+        // 4. Daftar pesanan aktif yang jatuh tempo hari ini atau sudah terlambat
         $recentOrders = Order::with('details.productVariant')
             ->whereIn('status', ['pending', 'process'])
-            ->orderByRaw('pickup_at IS NULL, pickup_at ASC')
-            ->limit(5)
+            ->whereDate('pickup_at', '<=', $today)
+            ->orderBy('pickup_at', 'asc')
+            ->limit(10)
             ->get();
 
-        // 3. Susun Data Statistik
         $statistics = [
             'active_orders'     => $activeOrders,
             'completed_today'   => $completedToday,
@@ -62,28 +66,21 @@ class DashboardController extends Controller
             ->whereDate('date', $today)
             ->first();
 
-        $startOfWeek = Carbon::now()->startOfWeek()->startOfDay();
-        $endOfWeek = Carbon::now()->endOfWeek()->endOfDay();
+        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $endOfWeek   = $startOfWeek->copy()->addDays(5)->endOfDay();
 
         $weeklyAttendances = Attendance::where('employees_id', $employee->id)
             ->whereBetween('date', [$startOfWeek, $endOfWeek])
             ->get();
 
-        $totalGaji = $weeklyAttendances->sum('daily_wage');
-        $totalKehadiran = $weeklyAttendances->where('attendance_status', '!=', 'alpa')->count();
-        $totalLembur = $weeklyAttendances->sum(function ($att) {
-            return $att->overtime_1x + $att->overtime_2x;
-        });
-
-        $paginatedAttendances = Attendance::where('employees_id', $employee->id)
-            ->orderBy('date', 'desc')
-            ->paginate(10);
+        $sickDays = $weeklyAttendances->where('attendance_status', 'izin_sakit')
+            ->where('sick_leave_status', 'approved')
+            ->count();
 
         $salaryData = [
-            'total_gaji'      => $totalGaji,
-            'total_kehadiran' => $totalKehadiran,
-            'total_lembur'    => $totalLembur,
-            'attendances'     => $paginatedAttendances
+            'total_gaji'      => $weeklyAttendances->sum('daily_wage') + ($sickDays * config('payroll.sick_allowance', 0)),
+            'total_kehadiran' => $weeklyAttendances->where('attendance_status', 'hadir')->whereNotNull('check_in_at')->count(),
+            'total_lembur'    => $weeklyAttendances->sum(fn ($att) => ($att->overtime_1x ?? 0) + ($att->overtime_2x ?? 0)),
         ];
 
         return view('employee.dashboard', compact('employee', 'attendanceToday', 'salaryData'));

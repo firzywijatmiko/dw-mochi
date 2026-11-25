@@ -8,7 +8,7 @@
 
     @php $currentPerPage = $perPage ?? request('per_page', 10); @endphp
 
-{{-- Filter Periode (Bersih tanpa multi-button) & Tombol Unduh PDF --}}
+    {{-- Filter Periode & Tombol Unduh PDF --}}
     <div class="flex flex-col sm:flex-row flex-wrap sm:items-center justify-between gap-3 rounded-lg border border-[#e7e0d8] bg-white p-3 shadow-sm">
         <form method="GET" action="{{ route('owner.reports.index') }}" class="flex flex-wrap items-center gap-2">
             @if(request('per_page')) <input type="hidden" name="per_page" value="{{ request('per_page') }}"> @endif
@@ -34,7 +34,6 @@
     <!-- MODAL PREVIEW LAPORAN KEUANGAN -->
     <div x-cloak x-show="openPreviewModal" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0f2137]/40 p-4 backdrop-blur-sm">
         <div @click.away="openPreviewModal = false" class="w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl">
-            {{-- Header Modal --}}
             <div class="flex items-center justify-between px-2 pb-3 border-b border-gray-100">
                 <h3 class="text-sm font-bold text-[#0f2137]">Preview Laporan Keuangan</h3>
                 <button type="button" @click="openPreviewModal = false" class="text-gray-400 hover:text-gray-600">
@@ -42,7 +41,6 @@
                 </button>
             </div>
 
-            {{-- Konten Dokumen Preview --}}
             <div class="my-4 max-h-[65vh] overflow-y-auto rounded-lg border border-gray-300 bg-white p-5 text-[#222] shadow-inner">
                 <div class="border-b-2 border-[#0f2137] pb-2.5 mb-3">
                     <h1 class="text-base font-bold text-[#0f2137] m-0">Laporan Keuangan DW Mochi</h1>
@@ -52,7 +50,6 @@
                     </p>
                 </div>
 
-                {{-- Tabel Ringkasan --}}
                 <table class="w-full border-collapse text-[11px] mb-4">
                     <tbody>
                         <tr>
@@ -80,7 +77,6 @@
                     </tbody>
                 </table>
 
-                {{-- Tabel Rincian Harian --}}
                 <h4 class="text-xs font-bold text-[#0f2137] mt-4 mb-1.5">Rincian Harian</h4>
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-[10px]">
@@ -115,7 +111,6 @@
                     </table>
                 </div>
 
-                {{-- Tabel Rincian Pengeluaran --}}
                 @if(isset($mergedExpenses))
                     <h4 class="text-xs font-bold text-[#0f2137] mt-4 mb-1.5">Rincian Pengeluaran</h4>
                     <table class="w-full border-collapse text-[10px]">
@@ -150,7 +145,6 @@
                 </p>
             </div>
 
-            {{-- Footer Tombol Aksi Modal --}}
             <div class="mt-4 flex gap-2 px-2">
                 <a href="{{ route('owner.reports.index', ['start_date' => $startDate, 'end_date' => $endDate, 'download' => 1]) }}" 
                    @click="openPreviewModal = false"
@@ -195,14 +189,14 @@
         };
         $chartList    = $chartData ?? [];
         $totalBars    = count($chartList);
-        $labelStep    = $totalBars > 15 ? (int) ceil($totalBars / 10) : 1; // Atur jarak label otomatis agar tidak bertumpuk
+        $isDailyMode  = ($chartMode ?? 'weekly') === 'daily';
         $hasChartData = collect($chartList)->contains(fn($w) => $w['income'] > 0 || $w['expense'] > 0);
     @endphp
-    <div class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] p-4">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <div x-data="{ hoveredBar: null }" class="bg-white rounded-lg shadow-sm border border-[#e7e0d8] p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
                 <h3 class="font-bold text-[#0f2137] text-sm">
-                    Tren Keuangan {{ ($chartMode ?? 'weekly') === 'daily' ? 'Harian' : (($chartMode ?? 'weekly') === 'monthly' ? 'Bulanan' : 'Mingguan') }}
+                    Tren Keuangan {{ $isDailyMode ? 'Harian' : (($chartMode ?? 'weekly') === 'monthly' ? 'Bulanan' : 'Mingguan') }}
                 </h3>
                 <p class="text-[11px] text-gray-400">
                     Periode {{ \Carbon\Carbon::parse($startDate)->translatedFormat('d M Y') }} – {{ \Carbon\Carbon::parse($endDate)->translatedFormat('d M Y') }}
@@ -220,33 +214,70 @@
             </div>
         </div>
 
+        {{-- Info Bar Hover --}}
+        <div class="mb-3 flex min-h-[28px] flex-wrap items-center justify-between gap-2 rounded-md border border-[#eee9e4] bg-[#faf9f7] px-3 py-1.5 text-[11px]">
+            <template x-if="hoveredBar">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span class="font-bold text-[#0f2137]" x-text="hoveredBar.label"></span>
+                    <span class="text-gray-600">Pemasukan: <strong class="text-[#0f2137]" x-text="'Rp ' + hoveredBar.income"></strong></span>
+                    <span class="text-gray-600">Pengeluaran: <strong class="text-[#8b5a33]" x-text="'Rp ' + hoveredBar.expense"></strong></span>
+                </div>
+            </template>
+            <template x-if="!hoveredBar">
+                <span class="text-gray-400">Arahkan kursor ke batang grafik untuk melihat rincian nominal per {{ $isDailyMode ? 'tanggal' : (($chartMode ?? 'weekly') === 'monthly' ? 'bulan' : 'minggu') }}.</span>
+            </template>
+        </div>
+
         <div class="w-full flex">
-            <div class="flex flex-col justify-between text-[10px] text-gray-400 pr-2 h-40 text-right select-none w-10 shrink-0">
+            {{-- Sumbu Y Tetap di Kiri --}}
+            <div class="flex flex-col justify-between text-[10px] text-gray-400 pr-2 h-44 text-right select-none w-11 shrink-0 pb-8">
                 <span>{{ isset($chartMax) ? $short($chartMax) : '0' }}</span>
                 <span>{{ isset($chartMax) ? $short($chartMax * 0.5) : '0' }}</span>
                 <span>0</span>
             </div>
-            <div class="flex-1 relative min-w-0">
-                <div class="absolute inset-0 border-b border-l border-gray-200"></div>
-                <div class="absolute inset-x-0 top-1/2 border-t border-dashed border-gray-100"></div>
-                <div class="relative h-40 flex items-end justify-around px-1 gap-0.5">
-                    @foreach($chartList as $w)
-                        @php
-                            $incomePct  = (isset($chartMax) && $chartMax > 0) ? ($w['income']  / $chartMax * 100) : 0;
-                            $expensePct = (isset($chartMax) && $chartMax > 0) ? ($w['expense'] / $chartMax * 100) : 0;
-                        @endphp
-                        <div class="flex-1 h-full flex items-end justify-center gap-[1px] sm:gap-1 z-10 group min-w-0">
-                            <div class="w-full max-w-[18px] bg-[#0f2137] rounded-t relative hover:opacity-80 transition" style="height: {{ max($incomePct, 1) }}%;" title="{{ $w['label'] }} | Pemasukan: Rp {{ number_format($w['income'], 0, ',', '.') }}"></div>
-                            <div class="w-full max-w-[18px] bg-[#8b5a33] rounded-t relative hover:opacity-80 transition" style="height: {{ max($expensePct, 1) }}%;" title="{{ $w['label'] }} | Pengeluaran: Rp {{ number_format($w['expense'], 0, ',', '.') }}"></div>
+
+            {{-- Area Batang & Label Sumbu X --}}
+            <div class="flex-1 overflow-x-auto pb-1">
+                <div class="{{ $totalBars > 10 ? 'min-w-[960px]' : 'w-full' }}">
+                    <div class="relative h-44 border-b border-l border-gray-200">
+                        <div class="absolute inset-x-0 top-1/2 border-t border-dashed border-gray-200/80 pointer-events-none"></div>
+
+                        <div class="relative h-full flex items-end justify-around">
+                            @foreach($chartList as $idx => $w)
+                                @php
+                                    $incomePct   = (isset($chartMax) && $chartMax > 0) ? ($w['income']  / $chartMax * 100) : 0;
+                                    $expensePct  = (isset($chartMax) && $chartMax > 0) ? ($w['expense'] / $chartMax * 100) : 0;
+                                    $isNewMonth  = $isDailyMode && $idx > 0 && str_starts_with(trim($w['label']), '1 ');
+                                @endphp
+                                <div @mouseenter="hoveredBar = { label: @js($w['label']), income: @js(number_format($w['income'], 0, ',', '.')), expense: @js(number_format($w['expense'], 0, ',', '.')) }"
+                                     @mouseleave="hoveredBar = null"
+                                     class="flex-1 h-full flex items-end justify-center gap-0.5 px-1 z-10 hover:bg-[#faf8f5] transition cursor-pointer border-l {{ $isNewMonth ? 'border-l-2 border-gray-300' : 'border-gray-100 first:border-l-0' }}">
+                                    <div class="w-full max-w-[16px] bg-[#0f2137] rounded-t transition-all"
+                                         style="height: {{ $w['income'] > 0 ? max($incomePct, 3) : 1 }}%; opacity: {{ $w['income'] > 0 ? '1' : '0.2' }};"></div>
+                                    <div class="w-full max-w-[16px] bg-[#8b5a33] rounded-t transition-all"
+                                         style="height: {{ $w['expense'] > 0 ? max($expensePct, 3) : 1 }}%; opacity: {{ $w['expense'] > 0 ? '1' : '0.2' }};"></div>
+                                </div>
+                            @endforeach
                         </div>
-                    @endforeach
-                </div>
-                <div class="flex justify-around px-1 mt-1.5">
-                    @foreach($chartList as $idx => $w)
-                        <span class="flex-1 text-center text-[10px] text-gray-500 truncate">
-                            {{ ($idx % $labelStep === 0) ? $w['label'] : '' }}
-                        </span>
-                    @endforeach
+                    </div>
+
+                    {{-- Label Sumbu X: Tanggal + Bulan bertumpuk 2 baris agar jelas & tidak bertabrakan --}}
+                    <div class="flex justify-around mt-1.5">
+                        @foreach($chartList as $idx => $w)
+                            @php
+                                $parts      = explode(' ', trim($w['label']), 2);
+                                $isNewMonth = $isDailyMode && $idx > 0 && ($parts[0] ?? '') === '1';
+                            @endphp
+                            <div class="flex-1 text-center px-0.5 leading-tight {{ $isNewMonth ? 'border-l-2 border-gray-300' : '' }}" title="{{ $w['label'] }}">
+                                @if($isDailyMode && count($parts) === 2)
+                                    <div class="text-[10px] font-bold {{ $isNewMonth ? 'text-[#0f2137]' : 'text-gray-700' }}">{{ $parts[0] }}</div>
+                                    <div class="text-[9px] {{ $isNewMonth ? 'font-semibold text-[#c28455]' : 'text-gray-400' }}">{{ $parts[1] }}</div>
+                                @else
+                                    <span class="text-[10px] font-medium text-gray-600 whitespace-nowrap">{{ $w['label'] }}</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>

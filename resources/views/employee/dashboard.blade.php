@@ -56,6 +56,11 @@
                         {{ $errors->first('sick_leave') }}
                     </div>
                 @endif
+                @if($errors->has('sick_leave_proof'))
+                    <div role="alert" class="bg-red-50 text-red-600 border border-red-200 p-3 rounded-xl mb-4 text-xs font-semibold">
+                        {{ $errors->first('sick_leave_proof') }}
+                    </div>
+                @endif
 
                 <!-- Logika Tombol Check-In / Check-Out -->
                 @if($attendanceToday)

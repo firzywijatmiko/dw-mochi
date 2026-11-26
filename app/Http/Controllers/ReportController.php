@@ -14,7 +14,7 @@ class ReportController extends Controller
     {
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
         $endDate   = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
-        $perPage   = (int) $request->input('per_page', 10);
+                $perPage   = in_array((int) $request->input('per_page'), [5, 10, 25, 50]) ? (int) $request->input('per_page') : 10;
         $chartMode = $request->input('chart_mode', 'weekly'); // daily | weekly | monthly
 
         if ($startDate > $endDate) {

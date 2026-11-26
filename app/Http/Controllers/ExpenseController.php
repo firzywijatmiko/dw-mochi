@@ -64,19 +64,23 @@ class ExpenseController extends Controller
         // Gabung dan urutkan dari tanggal terbaru
         $mergedExpenses = $materialExpenses->merge($payrollExpenses)->sortByDesc('expense_date')->values();
 
-        // Pagination 25 per halaman
-        $perPage = 25;
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        // Pagination: jumlah per halaman mengikuti ?per_page (hanya 5, 10, 25, 50)
+        $perPage = in_array((int) $request->input('per_page'), [5, 10, 25, 50])
+            ? (int) $request->input('per_page')
+            : 10;
+
+        $total       = $mergedExpenses->count();
+        $lastPage    = max((int) ceil($total / $perPage), 1);
+        $currentPage = min(max(LengthAwarePaginator::resolveCurrentPage(), 1), $lastPage);
         $currentData = $mergedExpenses->slice(($currentPage - 1) * $perPage, $perPage)->values();
 
         $expenses = new LengthAwarePaginator(
             $currentData,
-            $mergedExpenses->count(),
+            $total,
             $perPage,
             $currentPage,
-            ['path' => $request->url()]
+            ['path' => $request->url(), 'query' => $request->except('page')]
         );
-        $expenses->withQueryString();
 
         return view('owner.expenses.index', compact(
             'expenses',
@@ -86,7 +90,8 @@ class ExpenseController extends Controller
             'startDate',
             'endDate',
             'search',
-            'type'
+            'type',
+            'perPage'
         ));
     }
 

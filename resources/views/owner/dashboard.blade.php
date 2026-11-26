@@ -7,7 +7,7 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-lg font-bold text-[#0f2137]">Ringkasan Operasional</h1>
-            <p class="mt-1 text-xs text-gray-500">Pantau pesanan dan aktivitas DW Mochi hari ini.</p>
+            <p class="mt-1 text-xs text-gray-500">Pantau jadwal pengambilan pesanan dan aktivitas DW Mochi hari ini.</p>
         </div>
         <span class="hidden rounded-full bg-white px-3 py-1.5 text-xs text-gray-500 shadow-sm sm:inline-flex">
             {{ now()->translatedFormat('d F Y') }}
@@ -17,24 +17,24 @@
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
             <div class="flex items-start justify-between">
-                <p class="text-[10px] font-semibold text-gray-500">Pesanan Aktif</p>
+                <p class="text-[10px] font-semibold text-gray-500">Pesanan Aktif Hari Ini</p>
                 <span class="rounded-md bg-[#fff4e8] p-1.5 text-[#c28455]">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </span>
             </div>
             <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['active_orders'] ?? 0 }}</p>
-            <p class="mt-1 text-[10px] text-gray-400">menunggu &amp; sedang diproses</p>
+            <p class="mt-1 text-[10px] text-gray-400">jadwal ambil hari ini (menunggu &amp; diproses)</p>
         </div>
 
         <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
             <div class="flex items-start justify-between">
-                <p class="text-[10px] font-semibold text-gray-500">Pesanan Selesai</p>
+                <p class="text-[10px] font-semibold text-gray-500">Pesanan Selesai Hari Ini</p>
                 <span class="rounded-md bg-[#edf8f2] p-1.5 text-[#3f9b72]">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.8" d="M5 13l4 4L19 7"/></svg>
                 </span>
             </div>
             <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['completed_today'] ?? 0 }}</p>
-            <p class="mt-1 text-[10px] text-gray-400">selesai hari ini</p>
+            <p class="mt-1 text-[10px] text-gray-400">jadwal ambil hari ini yang sudah selesai</p>
         </div>
 
         <div class="rounded-lg border border-[#e7e0d8] bg-white p-4 shadow-sm">
@@ -47,17 +47,14 @@
             <p class="mt-3 text-xl font-bold text-[#0f2137]">{{ $statistics['present_employees'] ?? 0 }}</p>
             <p class="mt-1 text-[10px] text-gray-400">sudah check-in hari ini</p>
         </div>
-
     </div>
-
-    <a href="{{ route('owner.orders.index') }}" class="inline-flex items-center gap-2 rounded-md bg-[#0f2137] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#183252]">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
-        Tambah Pesanan Baru
-    </a>
 
     <section class="overflow-hidden rounded-lg border border-[#e7e0d8] bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-[#eee9e4] px-4 py-3">
-            <h2 class="text-xs font-bold text-[#0f2137]">Pesanan yang Perlu Diperhatikan</h2>
+            <div>
+                <h2 class="text-xs font-bold text-[#0f2137]">Pesanan yang Perlu Diperhatikan</h2>
+                <p class="text-[10px] text-gray-400">Menampilkan pesanan aktif dengan jadwal ambil hari ini atau sudah terlewat</p>
+            </div>
             <a href="{{ route('owner.orders.index') }}" class="text-[10px] font-semibold text-[#c28455] hover:underline">Lihat Semua →</a>
         </div>
         <div class="overflow-x-auto">
@@ -94,14 +91,14 @@
                             <td class="px-4 py-3">
                                 {{ $order->pickup_at ? \Carbon\Carbon::parse($order->pickup_at)->format('d M Y, H:i') : 'Belum dijadwalkan' }}
                                 @if($isOverdue)
-                                    <div class="mt-1 text-[9px] font-semibold text-red-600">Terlambat</div>
+                                    <span class="ml-1 inline-flex rounded bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600">Terlambat</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3"><span class="{{ $status[1] }} inline-flex rounded-full px-2 py-1 text-[9px] font-semibold">{{ $status[0] }}</span></td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-xs text-gray-400">Belum ada pesanan yang perlu ditangani.</td>
+                            <td colspan="5" class="px-4 py-8 text-center text-xs text-gray-400">Tidak ada pesanan aktif untuk hari ini.</td>
                         </tr>
                     @endforelse
                 </tbody>
